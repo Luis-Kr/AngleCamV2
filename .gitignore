@@ -22,29 +22,3 @@ venv/
 
 # Data files
 data/
-
-# All files
-*.json
-*.csv
-*.txt
-*.pdf
-*.tex
-*.md
-*.mdx
-*.mdx
-*.mdx
-*.mdx
-*.mdx
-*.png
-*.jpg
-*.jpeg
-*.gif
-*.bmp
-*.tiff
-*.ico
-*.docx
-*.doc
-*.xls
-*.xlsx
-*.ppt
-*.pptx
