@@ -1,0 +1,52 @@
+# @package _global_
+epochs: 50
+batch_size: 32
+learning_rate: 1e-4
+weight_decay: 0.001
+
+optimizer:
+  name: AdamW
+
+scheduler:
+  name: ReduceLROnPlateau
+  min_lr: 1e-6
+  mode: "min"                  
+  factor: 0.3                 
+  patience: 4                   
+  threshold: 0.0001
+
+loss:
+  name: HuberLoss
+
+gradient_clipping:
+  enabled: true                 
+  max_norm: 3.0          
+  norm_type: 2
+  
+checkpointing:
+  save_best: true
+  save_last: true
+  monitor: val_mae
+  mode: min
+  
+early_stopping:
+  patience: 20
+  monitor: val_mae
+  mode: min
+  min_delta: 0.001
+
+input:
+  train_csv: data/model/input/training.csv
+  val_csv: data/model/input/validation.csv
+  test_csv: data/model/input/testing.csv
+
+output:
+  base_dir: _data/runs
+
+  subdirectories:
+    models: "models"              
+    metrics: "metrics"            
+    logs: "logs"                  
+    predictions: "predictions"    
+    checkpoints: "checkpoints"    
+    configs: "configs"

@@ -1,0 +1,19 @@
+defaults:
+  - model: ../models/model.yaml
+  - training: ../core/training.yaml
+  - inference: ../core/inference.yaml
+  - _self_
+
+# Global settings
+device: auto  # auto, cpu, cuda:1, mps
+seed: 42
+output_dir: ${hydra:runtime.output_dir}
+
+# Hydra configuration
+hydra:
+  job:
+    name: anglecam
+  run:
+    dir: outputs/${hydra.job.name}/${now:%Y-%m-%d_%H-%M-%S}
+  sweep:
+    dir: multirun/${hydra.job.name}/${now:%Y-%m-%d_%H-%M-%S}

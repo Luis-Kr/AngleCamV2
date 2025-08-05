@@ -1,0 +1,32 @@
+# @package _global_
+name: dinov2_vits
+architecture: dinov2
+pretrained: true
+freeze_backbone: false
+trainable_transformer_blocks: [10, 11]
+
+backbone:
+  model_name: dinov2_vits14
+  hidden_dim: 384
+  resize_size: 224
+  crop_size: 224
+  normalize: true
+
+head:
+  hidden_dims: [128]
+  dropout: 0.4
+  activation: sigmoid
+  
+output:
+  num_bins: 43 
+  bin_width: 2.0
+  angle_range: [0, 90]
+
+augmentation:
+  normalize: true
+  horizontal_flip: 0.5
+  resized_crop_scale: [0.8, 1.0]
+  brightness: 0.4
+  contrast: 0.4 
+  grayscale: 0.5
+  gaussian_noise: 0.02
