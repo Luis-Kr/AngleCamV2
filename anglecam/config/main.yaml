@@ -1,19 +1,20 @@
 defaults:
-  - model: ../models/model.yaml
+  - _self_
+  - model: ../model/model.yaml
   - training: ../core/training.yaml
   - inference: ../core/inference.yaml
-  - _self_
+  - fit_dist: ../utils/fit_beta_distribution.yaml
 
 # Global settings
-device: auto  # auto, cpu, cuda:1, mps
-seed: 42
-output_dir: ${hydra:runtime.output_dir}
+device: cuda:1  # auto, cpu, cuda:1, mps
+seed: 1234
 
-# Hydra configuration
-hydra:
-  job:
-    name: anglecam
-  run:
-    dir: outputs/${hydra.job.name}/${now:%Y-%m-%d_%H-%M-%S}
-  sweep:
-    dir: multirun/${hydra.job.name}/${now:%Y-%m-%d_%H-%M-%S}
+# Data paths (can be overridden via command line)
+data:
+  train_csv: data/model/input/training.csv
+  val_csv: data/model/input/validation.csv
+  test_csv: data/model/input/testing.csv
+  data_dir: data/images/training_validation
+
+# Output configuration
+output_dir: data/model/output
