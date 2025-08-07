@@ -3,6 +3,7 @@ logs/
 *.log
 *.tmp
 *.bak
+*.pth
 
 # System files
 .DS_Store
@@ -22,3 +23,5 @@ venv/
 
 # Data files
 data/
+.cursor/rules/
+outputs/
