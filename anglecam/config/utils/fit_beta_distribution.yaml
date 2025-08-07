@@ -1,0 +1,8 @@
+input_path: /path/to/input/directory
+output_dir: /path/to/output/directory
+
+sd_fraction: 0.2
+sim_per_pic: 50
+angle_resolution: 43
+scaling_factor: 10
+ncp: 0
