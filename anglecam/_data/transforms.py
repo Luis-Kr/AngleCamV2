@@ -5,11 +5,19 @@ Image transformation utilities for AngleCam leaf angle estimation.
 
 from typing import Tuple, Union
 from pathlib import Path
+import numpy as np
 
 import cv2
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
+from albumentations.core.transforms_interface import ImageOnlyTransform
 from omegaconf import DictConfig
+import torch
+import logging
+
+def normalize_to_float32(image, **kwargs):
+    """Convert image to float32 and normalize to [0,1] range."""
+    return image.astype(np.float32) / 255.0
 
 
 class GetTransforms:
@@ -36,6 +44,11 @@ class GetTransforms:
             ]
         )
 
+        # # Randomly convert to grayscale
+        # grayscale_prob = self.cfg.model.augmentation.grayscale
+        # if grayscale_prob > 0:
+        #     transform_list.append(A.ToGray(num_output_channels=3, p=grayscale_prob))
+
         # Add horizontal flip if enabled
         horizontal_flip_prob = self.cfg.model.augmentation.horizontal_flip
         if horizontal_flip_prob > 0:
@@ -49,7 +62,18 @@ class GetTransforms:
                 A.RandomBrightnessContrast(
                     brightness_limit=brightness_limit,
                     contrast_limit=contrast_limit,
-                    p=0.8,
+                    p=0.5,
+                )
+            )
+            
+        saturation_limit = self.cfg.model.augmentation.saturation
+        if saturation_limit > 0:
+            transform_list.append(
+                A.HueSaturationValue(
+                    hue_shift_limit=0,
+                    sat_shift_limit=saturation_limit,
+                    val_shift_limit=[-5, 5],
+                    p=0.1
                 )
             )
 
@@ -65,11 +89,18 @@ class GetTransforms:
         # Add normalization if enabled
         if self.cfg.model.backbone.normalize:
             transform_list.append(self._get_normalization())
+        else:
+            transform_list.append(A.Lambda(image=normalize_to_float32))
 
         # Add tensor conversion
         transform_list.append(ToTensorV2())
 
         return A.Compose(transform_list)
+        
+    def _debug_print(self, image, stage):
+        """Debug function to print image info"""
+        print(f"DEBUG {stage}: shape={image.shape}, dtype={image.dtype}, min={image.min():.3f}, max={image.max():.3f}")
+        return image
 
     def get_transforms_validation(self) -> A.Compose:
         transform_list = [
@@ -82,10 +113,13 @@ class GetTransforms:
                 height=self.cfg.model.backbone.crop_size,
                 width=self.cfg.model.backbone.crop_size,
             ),
+            #A.Lambda(image=lambda x, **kwargs: x.astype(np.float32) / 255.0),
         ]
 
         if self.cfg.model.backbone.normalize:
             transform_list.append(self._get_normalization())
+        else:
+            transform_list.append(A.Lambda(image=normalize_to_float32))
 
         transform_list.append(ToTensorV2())
 
@@ -101,9 +135,7 @@ class GetTransforms:
         )
 
 
-def create_transform_pipeline(
-    config: DictConfig, mode: str = "train"
-) -> A.Compose: 
+def create_transform_pipeline(config: DictConfig, mode: str = "train") -> A.Compose:
     transform_factory = GetTransforms(config)
 
     if mode == "train":
