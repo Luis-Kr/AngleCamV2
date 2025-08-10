@@ -100,7 +100,9 @@ class AngleCam:
         return results
 
     def predict(
-        self, input_data: Union[str, List[str], Path]
+        self,
+        input_data: Union[str, List[str], Path],
+        reference_mean: Optional[Union[float, List[float], Dict[str, float]]] = None,
     ) -> Union[Dict, List[Dict]]:
         """
         Predict leaf angles from image(s).
@@ -129,7 +131,7 @@ class AngleCam:
             )
 
         # Run prediction
-        results = self.predictor.predict(input_data)
+        results = self.predictor.predict(input_data, reference_mean=reference_mean)
 
         self.logger.info("Prediction completed successfully")
         return results
