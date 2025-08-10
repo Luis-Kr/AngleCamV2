@@ -12,6 +12,7 @@ import pandas as pd
 from PIL import Image
 from omegaconf import DictConfig
 import os
+import cv2
 
 # Get project root directory (relative to this file)
 root_dir = Path(__file__).parent.parent.parent
@@ -40,6 +41,12 @@ class BaseAngleCamDataset(Dataset):
             transform: Image transformation pipeline
         """
         self.data_dir = Path(data_dir)
+        self.testing_dir_calathea = (
+            Path(data_dir).parent / "testing" / "calathea_ornata"
+        )
+        self.testing_dir_maranta = (
+            Path(data_dir).parent / "testing" / "maranta_leuconeura"
+        )
         self.dataframe = dataframe.copy()
         self.transform = transform
 
@@ -65,6 +72,46 @@ class BaseAngleCamDataset(Dataset):
         """Load and validate image file"""
         filename = self.dataframe.iloc[idx]["filename"]
         image_path = self.data_dir / filename
+
+        try:
+            image = Image.open(image_path)
+            # Ensure consistent three channel format for all images
+            three_channel_image = image.convert("RGB")
+
+            if three_channel_image.mode != "RGB":
+                raise ValueError(
+                    f"Failed to convert to three channel mode. Current mode: {three_channel_image.mode}"
+                )
+
+            return three_channel_image
+
+        except Exception as e:
+            raise RuntimeError(f"Failed to load image {image_path}: {str(e)}")
+
+    def _load_image_calathea(self, idx: int) -> Image.Image:
+        """Load and validate image file"""
+        filename = self.dataframe.iloc[idx]["filename"]
+        image_path = self.testing_dir_calathea / filename
+
+        try:
+            image = Image.open(image_path)
+            # Ensure consistent three channel format for all images
+            three_channel_image = image.convert("RGB")
+
+            if three_channel_image.mode != "RGB":
+                raise ValueError(
+                    f"Failed to convert to three channel mode. Current mode: {three_channel_image.mode}"
+                )
+
+            return three_channel_image
+
+        except Exception as e:
+            raise RuntimeError(f"Failed to load image {image_path}: {str(e)}")
+
+    def _load_image_maranta(self, idx: int) -> Image.Image:
+        """Load and validate image file"""
+        filename = self.dataframe.iloc[idx]["filename"]
+        image_path = self.testing_dir_maranta / filename
 
         try:
             image = Image.open(image_path)
@@ -132,6 +179,10 @@ class AngleCamTrainingDataset(BaseAngleCamDataset):
         transform: Optional[Callable] = None,
         logger: Optional[logging.Logger] = None,
         min_simulation_rows: int = 2,
+        grayscale_prob: float = 0.5,
+        distance_dimming_prob: float = 0.5,
+        d0: float = 1.0,
+        min_intensity: float = 0.1,
     ) -> None:
         """
         Initialize training dataset.
@@ -149,8 +200,108 @@ class AngleCamTrainingDataset(BaseAngleCamDataset):
         self.valid_indices = list(range(len(dataframe)))
         self.logger = logger
 
+        # RGB/Grayscale control parameters
+        self.grayscale_prob = grayscale_prob
+        self.distance_dimming_prob = distance_dimming_prob
+        self.d0 = d0
+        self.min_intensity = min_intensity
+
         # Validate that label files exist and have sufficient data
         self._validate_label_files()
+
+    def _load_depth_map(self, image_filename: str) -> np.ndarray:
+        """
+        Load depth map corresponding to the image.
+
+        Args:
+            image_filename: Name of the image file
+
+        Returns:
+            Depth map as numpy array
+        """
+        # Convert image filename to depth map filename
+        base_name = image_filename.rsplit(".", 1)[0]
+        depth_filename = f"{base_name}_dpm.npy"
+        depth_path = self.data_dir / depth_filename
+
+        try:
+            depth_map = np.load(depth_path)
+            return depth_map
+        except FileNotFoundError:
+            if self.logger:
+                self.logger.warning(f"Depth map not found: {depth_path}")
+            # Return dummy depth map (all ones) if not found
+            return np.ones((224, 224), dtype=np.float32)
+        except Exception as e:
+            if self.logger:
+                self.logger.warning(f"Error loading depth map {depth_path}: {str(e)}")
+            return np.ones((224, 224), dtype=np.float32)
+
+    def _apply_distance_dimming(
+        self, image: np.ndarray, depth_map: np.ndarray
+    ) -> np.ndarray:
+        """
+        Apply distance-based dimming to simulate IR camera behavior.
+
+        Args:
+            image: Grayscale image as numpy array (H, W, 3)
+            depth_map: Depth map as numpy array (H, W)
+
+        Returns:
+            Distance-dimmed image
+        """
+        # Ensure depth map has same spatial dimensions as image
+        if depth_map.shape[:2] != image.shape[:2]:
+            depth_map = cv2.resize(depth_map, (image.shape[1], image.shape[0]))
+            
+        # Scale grayscale image to 0-255 range
+        image = (image * 255).astype(np.uint8)
+
+        # Apply distance-based scaling: I_IR = I_gray * (d0/d)^2
+        distance_factor = (self.d0 / (depth_map + 2.0)) ** 2
+
+        # Apply scaling to all channels
+        pseudo_IR = image.copy().astype(np.float32)
+        pseudo_IR *= distance_factor
+
+        # Scale back to 0-1 range
+        pseudo_IR = (pseudo_IR - pseudo_IR.min()) / (pseudo_IR.max() - pseudo_IR.min()) 
+
+        # Expand dims to 3 channels
+        pseudo_IR = np.expand_dims(pseudo_IR, axis=2)
+        pseudo_IR = np.repeat(pseudo_IR, 3, axis=2)
+
+        return pseudo_IR
+
+    def _process_image_modality(self, image: Image.Image, filename: str) -> np.ndarray:
+        """
+        Process image to either RGB or grayscale with optional distance dimming.
+
+        Args:
+            image: PIL Image
+            filename: Image filename for loading corresponding depth map
+
+        Returns:
+            Processed image as numpy array
+        """
+        # Convert to numpy array (0-1 range)
+        image_array = np.array(image).astype(np.float32) / 255.0
+
+        # Decide on modality based on probability
+        use_grayscale = random.random() < self.grayscale_prob
+
+        if use_grayscale:
+            # Convert to grayscale (maintain 3 channels)
+            gray_image = np.dot(image_array[..., :3], [0.299, 0.587, 0.114])
+            gray_image_expanded_dims = np.expand_dims(gray_image, axis=2)
+            image_array = np.repeat(gray_image_expanded_dims, 3, axis=2)
+
+            # Apply distance dimming with probability
+            if random.random() < self.distance_dimming_prob:
+                depth_map = self._load_depth_map(filename)
+                image_array = self._apply_distance_dimming(gray_image, depth_map)
+
+        return image_array
 
     def _validate_label_files(self) -> None:
         """Validate that all required label files exist and have sufficient data."""
@@ -187,7 +338,7 @@ class AngleCamTrainingDataset(BaseAngleCamDataset):
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor, str, int]:
         """
-        Get training sample.
+        Get training sample with controlled RGB/grayscale distribution.
 
         Args:
             idx: Sample index
@@ -198,33 +349,34 @@ class AngleCamTrainingDataset(BaseAngleCamDataset):
         valid_idx = self.valid_indices[idx]
 
         try:
-            # Load and transform image
+            # Load image
             image = self._load_image(valid_idx)
+            filename = self.dataframe.iloc[valid_idx]["filename"]
+            image_path = str(self.data_dir / filename)
+
+            # Process image modality (RGB vs grayscale with distance dimming)
+            processed_image = self._process_image_modality(image, filename)
 
             # Apply transforms if provided
             if self.transform:
-                if hasattr(self.transform, "__call__"):
-                    # Albumentations transform
-                    transformed = self.transform(image=np.array(image))
-                    image_tensor = transformed["image"]
-                else:
-                    # Torchvision transforms
-                    image_tensor = self.transform(image)
+                # Convert back to 0-255 range for albumentations
+                image_uint8 = (processed_image * 255).astype(np.uint8)
+
+                transformed = self.transform(image=image_uint8)
+                image_tensor = transformed["image"]
             else:
-                # Default to tensor conversion
-                image_tensor = transforms.ToTensor()(image)
+                # Convert to tensor directly
+                image_tensor = (
+                    torch.from_numpy(processed_image).permute(2, 0, 1).float()
+                )
 
-            # Load labels with curriculum strategy
+            # Load labels
             labels = self._load_labels(valid_idx)
-
-            image_path = str(self.data_dir / self.dataframe.iloc[valid_idx]["filename"])
 
             return image_tensor, labels, image_path, valid_idx
 
         except Exception as e:
-            raise RuntimeError(
-                f"Error processing sample {idx} (valid_idx={valid_idx}): {str(e)}"
-            )
+            raise RuntimeError(f"Error processing sample {idx}: {str(e)}")
 
     def _load_labels(self, idx: int) -> torch.Tensor:
         """
@@ -319,7 +471,7 @@ class AngleCamValidationDataset(BaseAngleCamDataset):
             raise RuntimeError(f"Error processing validation sample {idx}: {str(e)}")
 
 
-class AngleCamTestDataset(BaseAngleCamDataset):
+class AngleCamTestDatasetCalathea(BaseAngleCamDataset):
     """Test dataset for inference."""
 
     def __init__(
@@ -350,7 +502,7 @@ class AngleCamTestDataset(BaseAngleCamDataset):
         """
         try:
             # Load and transform image
-            image = self._load_image(idx)
+            image = self._load_image_calathea(idx)
 
             # Apply transforms if provided
             if self.transform:
@@ -365,9 +517,69 @@ class AngleCamTestDataset(BaseAngleCamDataset):
                 # Default to tensor conversion
                 image_tensor = transforms.ToTensor()(image)
 
-            image_path = str(self.data_dir / self.dataframe.iloc[idx]["filename"])
+            image_path = str(
+                self.testing_dir_calathea / self.dataframe.iloc[idx]["filename"]
+            )
+            label = self.dataframe.iloc[idx]["tls_average_angle"]
 
-            return image_tensor, image_path, idx
+            return image_tensor, label, image_path, idx
+
+        except Exception as e:
+            raise RuntimeError(f"Error processing test sample {idx}: {str(e)}")
+
+
+class AngleCamTestDatasetMaranta(BaseAngleCamDataset):
+    """Test dataset for inference."""
+
+    def __init__(
+        self,
+        data_dir: Union[str, Path],
+        dataframe: pd.DataFrame,
+        transform: Optional[Callable] = None,
+    ) -> None:
+        """
+        Initialize test dataset.
+
+        Args:
+            data_dir: Directory containing test data
+            dataframe: DataFrame with test sample information
+            transform: Image transformation pipeline
+        """
+        super().__init__(data_dir, dataframe, transform)
+
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, str, int]:
+        """
+        Get test sample for inference.
+
+        Args:
+            idx: Sample index
+
+        Returns:
+            Tuple of (image_tensor, image_path, index)
+        """
+        try:
+            # Load and transform image
+            image = self._load_image_maranta(idx)
+
+            # Apply transforms if provided
+            if self.transform:
+                if hasattr(self.transform, "__call__"):
+                    # Albumentations transform
+                    transformed = self.transform(image=np.array(image))
+                    image_tensor = transformed["image"]
+                else:
+                    # Torchvision transforms
+                    image_tensor = self.transform(image)
+            else:
+                # Default to tensor conversion
+                image_tensor = transforms.ToTensor()(image)
+
+            image_path = str(
+                self.testing_dir_maranta / self.dataframe.iloc[idx]["filename"]
+            )
+            label = self.dataframe.iloc[idx]["tls_average_angle"]
+
+            return image_tensor, label, image_path, idx
 
         except Exception as e:
             raise RuntimeError(f"Error processing test sample {idx}: {str(e)}")
@@ -397,17 +609,23 @@ def load_dataframes(
     val_df = pd.read_csv(val_path, sep=",")
     test_df = pd.read_csv(test_path, sep=",")
 
+    # Split test_df into calathea and maranta
+    test_df_calathea = test_df[test_df["plant_name"] == "Calathea ornata"]
+    test_df_maranta = test_df[test_df["plant_name"] == "Maranta leuconeura"]
+
     # Reset indices for clean datasets
     train_df = train_df.reset_index(drop=True)
     val_df = val_df.reset_index(drop=True)
-    test_df = test_df.reset_index(drop=True)
+    test_df_calathea = test_df_calathea.reset_index(drop=True)
+    test_df_maranta = test_df_maranta.reset_index(drop=True)
 
     if logger:
         logger.info(f"Loaded {len(train_df)} training samples from {train_path}")
         logger.info(f"Loaded {len(val_df)} validation samples from {val_path}")
-        logger.info(f"Loaded {len(test_df)} test samples from {test_path}")
+        logger.info(f"Loaded {len(test_df_calathea)} test samples from {test_path}")
+        logger.info(f"Loaded {len(test_df_maranta)} test samples from {test_path}")
 
-    return train_df, val_df, test_df
+    return train_df, val_df, test_df_calathea, test_df_maranta
 
 
 def get_data_loaders(
@@ -431,7 +649,9 @@ def get_data_loaders(
         Tuple of (train_loader, val_loader, test_loader)
     """
     # Load dataframes from config
-    train_df, val_df, test_df = load_dataframes(config, logger)
+    train_df, val_df, test_df_calathea, test_df_maranta = load_dataframes(
+        config, logger
+    )
 
     # Get data directory from config (relative to project root)
     data_dir = root_dir / config.data.data_dir
@@ -447,15 +667,28 @@ def get_data_loaders(
 
     # Create datasets
     train_dataset = AngleCamTrainingDataset(
-        data_dir=data_dir, dataframe=train_df, transform=train_transform, logger=logger
+        data_dir=data_dir,
+        dataframe=train_df,
+        transform=train_transform,
+        logger=logger,
+        grayscale_prob=config.model.augmentation.get("grayscale_prob", 0.5),
+        distance_dimming_prob=config.model.augmentation.get(
+            "distance_dimming_prob", 0.9
+        ),
+        d0=config.model.augmentation.get("d0", 1.0),
+        min_intensity=config.model.augmentation.get("min_intensity", 0.1),
     )
 
     val_dataset = AngleCamValidationDataset(
         data_dir=data_dir, dataframe=val_df, transform=val_transform
     )
 
-    test_dataset = AngleCamTestDataset(
-        data_dir=data_dir, dataframe=test_df, transform=test_transform or val_transform
+    test_dataset_calathea = AngleCamTestDatasetCalathea(
+        data_dir=data_dir, dataframe=test_df_calathea, transform=val_transform
+    )
+
+    test_dataset_maranta = AngleCamTestDatasetMaranta(
+        data_dir=data_dir, dataframe=test_df_maranta, transform=val_transform
     )
 
     # Create data loaders
@@ -467,6 +700,8 @@ def get_data_loaders(
         pin_memory=pin_memory,
         drop_last=True,
         persistent_workers=num_workers > 0,
+        worker_init_fn=worker_init_fn,
+        generator=torch.Generator().manual_seed(config.seed),
     )
 
     val_loader = DataLoader(
@@ -478,8 +713,17 @@ def get_data_loaders(
         persistent_workers=num_workers > 0,
     )
 
-    test_loader = DataLoader(
-        test_dataset,
+    test_loader_calathea = DataLoader(
+        test_dataset_calathea,
+        batch_size=1,
+        shuffle=False,
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+        persistent_workers=num_workers > 0,
+    )
+
+    test_loader_maranta = DataLoader(
+        test_dataset_maranta,
         batch_size=1,
         shuffle=False,
         num_workers=num_workers,
@@ -493,10 +737,24 @@ def get_data_loaders(
             f"  - Training: {len(train_loader)} batches (batch_size={batch_size})"
         )
         logger.info(f"  - Validation: {len(val_loader)} batches (batch_size=1)")
-        logger.info(f"  - Test: {len(test_loader)} batches (batch_size=1)")
+        logger.info(f"  - Test: {len(test_loader_calathea)} batches (batch_size=1)")
+        logger.info(f"  - Test: {len(test_loader_maranta)} batches (batch_size=1)")
         logger.info(f"  - Data directory: {data_dir}")
 
-    return train_loader, val_loader, test_loader
+    return train_loader, val_loader, test_loader_calathea, test_loader_maranta
+
+
+def worker_init_fn(worker_id):
+    """Initialize worker with deterministic seed."""
+    import random
+    import numpy as np
+    import torch
+
+    # Set seed for this worker
+    worker_seed = torch.initial_seed() % 2**32
+    random.seed(worker_seed)
+    np.random.seed(worker_seed)
+    torch.manual_seed(worker_seed)
 
 
 # Convenience function for backward compatibility
