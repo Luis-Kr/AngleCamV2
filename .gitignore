@@ -23,5 +23,6 @@ venv/
 
 # Data files
 data/
-.cursor/rules/
+.cursor/
 outputs/
+manuscript/
