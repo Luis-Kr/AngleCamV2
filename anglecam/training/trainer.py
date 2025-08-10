@@ -36,6 +36,7 @@ class AngleCamTrainer:
         # Training state
         self.training_history = []
         self.best_metrics = {"val_loss": float("inf")}
+        self.best_test_metrics = {"test_r2_harmonic": 0.0}
 
     def _setup_training_components(self, model: nn.Module) -> None:
         """Setup optimizer, criterion, scheduler, etc."""
@@ -72,6 +73,8 @@ class AngleCamTrainer:
                     factor=scheduler_config.factor,
                     patience=scheduler_config.patience,
                     min_lr=scheduler_config.min_lr,
+                    threshold=scheduler_config.threshold,
+                    threshold_mode=scheduler_config.threshold_mode,
                 )
             else:
                 raise ValueError(
@@ -80,7 +83,7 @@ class AngleCamTrainer:
 
         # Checkpointer
         output_dir = Path(self.config.output_dir) / "checkpoints"
-        self.checkpointer = ModelCheckpointer(output_dir, self.logger)
+        self.checkpointer = ModelCheckpointer(output_dir, self.logger, self.config)
 
     def _train_epoch(
         self, model: nn.Module, train_loader: DataLoader, epoch: int
@@ -179,18 +182,71 @@ class AngleCamTrainer:
             "val_rmse": metrics["rmse"],
             "val_r2": metrics["r2"],
         }
-    
-    def _normalize_distribution(self, distribution_tensor: torch.Tensor) -> torch.Tensor:
+
+    def _test_epoch(
+        self, model: nn.Module, test_loader: DataLoader
+    ) -> Dict[str, float]:
+        """Testing for one epoch."""
+        model.eval()
+        all_predictions = []
+        all_targets = []
+        all_predictions_dict = []
+
+        with torch.no_grad():
+            for images, targets, _, _ in tqdm(test_loader, desc="Testing"):
+                images = images.to(self.device)
+
+                # Convert targets to proper tensor type and move to device
+                if isinstance(targets, (list, tuple)):
+                    targets = torch.tensor(targets, dtype=torch.float32).to(self.device)
+                else:
+                    targets = targets.float().to(self.device)
+
+                outputs = model(images)
+
+                # Convert to angles
+                predicted_mean_angles = self._probabilities_to_mean_angles(outputs)
+
+                all_predictions.extend(predicted_mean_angles.cpu().numpy().tolist())
+                all_targets.extend(targets.cpu().numpy().tolist())
+
+        # Calculate metrics
+        metrics = calculate_metrics(np.array(all_predictions), np.array(all_targets))
+
+        batch_dict = {
+            "predicted_mean_angles": all_predictions,
+            "targets": all_targets,
+        }
+
+        # Save all predictions to JSON file once
+        output_file = Path(self.config.output_dir) / "predictions.json"
+        with open(output_file, "w") as f:
+            json.dump(batch_dict, f, indent=2)
+
+        return {
+            "test_mae": metrics["mae"],
+            "test_rmse": metrics["rmse"],
+            "test_r2": metrics["r2"],
+        }
+
+    def _normalize_distribution(
+        self, distribution_tensor: torch.Tensor
+    ) -> torch.Tensor:
         """Normalize a distribution tensor to ensure it sums to 1."""
         return distribution_tensor / torch.sum(distribution_tensor, dim=1, keepdim=True)
 
-    def _probabilities_to_mean_angles(self, probabilities: torch.Tensor) -> torch.Tensor:
+    def _probabilities_to_mean_angles(
+        self, probabilities: torch.Tensor
+    ) -> torch.Tensor:
         """Convert probability distribution to angle predictions."""
         # Create angle bins
         angles = torch.linspace(
             0, 90, probabilities.shape[1], device=probabilities.device
         )
         
+        # # Make sure the probabilities sum to 1
+        # probabilities = probabilities / torch.sum(probabilities, dim=1, keepdim=True)
+
         return torch.sum(probabilities * angles, dim=1)
 
     def train(self, model: nn.Module, **kwargs) -> Dict[str, Any]:
@@ -214,10 +270,12 @@ class AngleCamTrainer:
         train_transform = create_transform_pipeline(self.config, mode="train")
         val_transform = create_transform_pipeline(self.config, mode="val")
 
-        train_loader, val_loader, _ = get_data_loaders(
-            config=self.config,
-            train_transform=train_transform,
-            val_transform=val_transform,
+        train_loader, val_loader, test_loader_calathea, test_loader_maranta = (
+            get_data_loaders(
+                config=self.config,
+                train_transform=train_transform,
+                val_transform=val_transform,
+            )
         )
 
         # Training parameters
@@ -235,6 +293,15 @@ class AngleCamTrainer:
             # Validate epoch
             val_metrics = self._validate_epoch(model, val_loader)
 
+            # Test epoch
+            test_metrics_calathea = self._test_epoch(model, test_loader_calathea)
+            test_metrics_maranta = self._test_epoch(model, test_loader_maranta)
+
+            # Calculate harmonic mean of test R2
+            test_r2_calathea = test_metrics_calathea["test_r2"]
+            test_r2_maranta = test_metrics_maranta["test_r2"]
+            test_r2_harmonic = 2 / (1 / test_r2_calathea + 1 / test_r2_maranta)
+
             # Update scheduler
             if self.scheduler:
                 self.scheduler.step(val_metrics["val_loss"])
@@ -246,6 +313,9 @@ class AngleCamTrainer:
                 "epoch_time": time.time() - epoch_start,
                 **train_metrics,
                 **val_metrics,
+                "test_r2_harmonic": test_r2_harmonic,
+                **test_metrics_calathea,
+                **test_metrics_maranta,
             }
 
             self.training_history.append(epoch_metrics)
@@ -258,8 +328,12 @@ class AngleCamTrainer:
                 f"Val Loss: {val_metrics['val_loss']:.7f}, "
                 f"Val R2: {val_metrics['val_r2']:.4f}, "
                 f"Val MAE: {val_metrics['val_mae']:.4f}, "
-                f"Val RMSE: {val_metrics['val_rmse']:.4f}, "
-                
+                f"Val RMSE: {val_metrics['val_rmse']:.4f}, || "
+                f"Test R2 Harmonic: {epoch_metrics['test_r2_harmonic']:.4f}, "
+                f"Test Calathea R2: {test_metrics_calathea['test_r2']:.4f}, "
+                f"Test Maranta R2: {test_metrics_maranta['test_r2']:.4f}, "
+                f"Test Calathea RMSE: {test_metrics_calathea['test_rmse']:.4f}, "
+                f"Test Maranta RMSE: {test_metrics_maranta['test_rmse']:.4f}, "
             )
 
             # Save best model
@@ -267,6 +341,13 @@ class AngleCamTrainer:
                 self.best_metrics.update(val_metrics)
                 self.checkpointer.save_best_model(
                     model, self.optimizer, epoch, val_metrics["val_loss"], "val_loss"
+                )
+
+            # Save best model based on test R2 harmonic
+            if test_r2_harmonic > self.best_test_metrics["test_r2_harmonic"]:
+                self.best_test_metrics.update({"test_r2_harmonic": test_r2_harmonic})
+                self.checkpointer.save_best_model(
+                    model, self.optimizer, epoch, test_r2_harmonic, "test_r2_harmonic"
                 )
 
             # Save checkpoint
