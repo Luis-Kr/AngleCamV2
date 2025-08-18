@@ -210,15 +210,7 @@ class AngleCamTrainingDataset(BaseAngleCamDataset):
         self._validate_label_files()
 
     def _load_depth_map(self, image_filename: str) -> np.ndarray:
-        """
-        Load depth map corresponding to the image.
-
-        Args:
-            image_filename: Name of the image file
-
-        Returns:
-            Depth map as numpy array
-        """
+        """Load depth map corresponding to the image."""
         # Convert image filename to depth map filename
         base_name = image_filename.rsplit(".", 1)[0]
         depth_filename = f"{base_name}_dpm.npy"
@@ -240,20 +232,15 @@ class AngleCamTrainingDataset(BaseAngleCamDataset):
     def _apply_distance_dimming(
         self, image: np.ndarray, depth_map: np.ndarray
     ) -> np.ndarray:
-        """
-        Apply distance-based dimming to simulate IR camera behavior.
-
-        Args:
-            image: Grayscale image as numpy array (H, W, 3)
-            depth_map: Depth map as numpy array (H, W)
-
-        Returns:
-            Distance-dimmed image
-        """
+        """Apply distance-based dimming to simulate IR camera behavior."""
         # Ensure depth map has same spatial dimensions as image
         if depth_map.shape[:2] != image.shape[:2]:
             depth_map = cv2.resize(depth_map, (image.shape[1], image.shape[0]))
-            
+
+        # Smooth the depth map to reduce speckle noise
+        depth_map = cv2.medianBlur(depth_map, 3)
+        depth_map = cv2.GaussianBlur(depth_map, (3, 3), 0.3)
+
         # Scale grayscale image to 0-255 range
         image = (image * 255).astype(np.uint8)
 
@@ -264,8 +251,13 @@ class AngleCamTrainingDataset(BaseAngleCamDataset):
         pseudo_IR = image.copy().astype(np.float32)
         pseudo_IR *= distance_factor
 
+        # Scale back to np.uint8 to smooth out subtle artifacts
+        pseudo_IR = pseudo_IR.astype(np.uint8)
+
         # Scale back to 0-1 range
-        pseudo_IR = (pseudo_IR - pseudo_IR.min()) / (pseudo_IR.max() - pseudo_IR.min()) 
+        pseudo_IR = (pseudo_IR - pseudo_IR.min()) / (
+            pseudo_IR.max() - pseudo_IR.min()
+        ).astype(np.float32)
 
         # Expand dims to 3 channels
         pseudo_IR = np.expand_dims(pseudo_IR, axis=2)
@@ -274,16 +266,7 @@ class AngleCamTrainingDataset(BaseAngleCamDataset):
         return pseudo_IR
 
     def _process_image_modality(self, image: Image.Image, filename: str) -> np.ndarray:
-        """
-        Process image to either RGB or grayscale with optional distance dimming.
-
-        Args:
-            image: PIL Image
-            filename: Image filename for loading corresponding depth map
-
-        Returns:
-            Processed image as numpy array
-        """
+        """Process image to either RGB or grayscale with optional distance dimming."""
         # Convert to numpy array (0-1 range)
         image_array = np.array(image).astype(np.float32) / 255.0
 
@@ -337,15 +320,7 @@ class AngleCamTrainingDataset(BaseAngleCamDataset):
         return len(self.valid_indices)
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor, str, int]:
-        """
-        Get training sample with controlled RGB/grayscale distribution.
-
-        Args:
-            idx: Sample index
-
-        Returns:
-            Tuple of (image_tensor, label_tensor, image_path, original_index)
-        """
+        """Get training sample with RGB/grayscale modality."""
         valid_idx = self.valid_indices[idx]
 
         try:
@@ -379,18 +354,6 @@ class AngleCamTrainingDataset(BaseAngleCamDataset):
             raise RuntimeError(f"Error processing sample {idx}: {str(e)}")
 
     def _load_labels(self, idx: int) -> torch.Tensor:
-        """
-        Load labels using curriculum learning strategy.
-
-        Early in training, uses only the most accurate simulation (row 0).
-        As training progresses, gradually includes noisier simulations.
-
-        Args:
-            idx: Sample index
-
-        Returns:
-            Label tensor for the selected simulation
-        """
         filename = self.dataframe.iloc[idx]["filename"]
         labels_path = self.data_dir / self._get_label_filename(filename)
 
@@ -409,7 +372,7 @@ class AngleCamTrainingDataset(BaseAngleCamDataset):
 
 
 class AngleCamValidationDataset(BaseAngleCamDataset):
-    """Validation dataset using ground truth labels."""
+    """Validation dataset using labeled LADs."""
 
     def __init__(
         self,
@@ -673,7 +636,7 @@ def get_data_loaders(
         logger=logger,
         grayscale_prob=config.model.augmentation.get("grayscale_prob", 0.5),
         distance_dimming_prob=config.model.augmentation.get(
-            "distance_dimming_prob", 0.9
+            "distance_dimming_prob", 0.5
         ),
         d0=config.model.augmentation.get("d0", 1.0),
         min_intensity=config.model.augmentation.get("min_intensity", 0.1),
@@ -746,10 +709,6 @@ def get_data_loaders(
 
 def worker_init_fn(worker_id):
     """Initialize worker with deterministic seed."""
-    import random
-    import numpy as np
-    import torch
-
     # Set seed for this worker
     worker_seed = torch.initial_seed() % 2**32
     random.seed(worker_seed)
@@ -761,14 +720,5 @@ def worker_init_fn(worker_id):
 def create_data_loaders(
     config: DictConfig, **kwargs
 ) -> Tuple[DataLoader, Optional[DataLoader], Optional[DataLoader]]:
-    """
-    Backward compatibility function that wraps get_data_loaders.
-
-    Args:
-        config: Hydra configuration
-        **kwargs: Additional arguments passed to get_data_loaders
-
-    Returns:
-        Tuple of (train_loader, val_loader, test_loader)
-    """
+    """Backward compatibility function that wraps get_data_loaders."""
     return get_data_loaders(config, **kwargs)
