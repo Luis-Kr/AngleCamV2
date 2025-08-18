@@ -99,7 +99,7 @@ class AngleCamTrainer:
         for batch_idx, (images, targets, _, _) in enumerate(progress_bar):
             images = images.to(self.device)
             targets = targets.to(self.device)
-
+            
             # Forward pass
             self.optimizer.zero_grad()
             outputs = model(images)
