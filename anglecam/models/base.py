@@ -31,6 +31,7 @@ class DINOv2_AngleCam(nn.Module):
 
     def _create_head(self) -> nn.Module:
         return nn.Sequential(
+            nn.Dropout(self.cfg.model.head.dropout),
             nn.Linear(
                 self.cfg.model.backbone.hidden_dim, self.cfg.model.head.hidden_dims[0]
             ),
@@ -39,7 +40,6 @@ class DINOv2_AngleCam(nn.Module):
             nn.Linear(
                 self.cfg.model.head.hidden_dims[0], self.cfg.model.output.num_bins
             )
-            #nn.Softmax(dim=1),  # Output is a probability distribution over the bins
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -47,8 +47,7 @@ class DINOv2_AngleCam(nn.Module):
         x = self.backbone(x)
         # Forward pass through the head
         x = self.head(x)
-        # Normalize the output using the sum
-        x = x / torch.sum(x, dim=1, keepdim=True) # F.softmax(x, dim=1)
+        x = F.softmax(x, dim=1)
         return x
 
     def _get_trainable_parameters(self) -> List[torch.Tensor]:
