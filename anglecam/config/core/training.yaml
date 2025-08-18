@@ -3,16 +3,17 @@ batch_size: 32
 
 optimizer: 
   name: AdamW
-  lr: 1e-4
-  weight_decay: 0.001
+  lr: 0.0001
+  weight_decay: 0.01
 
 scheduler:
   name: ReduceLROnPlateau
-  min_lr: 1e-6
+  min_lr: 1e-7
   mode: "min"                  
-  factor: 0.3                 
-  patience: 4                   
-  threshold: 0.0001
+  factor: 0.5                
+  patience: 5          
+  threshold: 1e-4
+  threshold_mode: "rel"
 
 loss:
   name: HuberLoss # Options: HuberLoss, MSELoss
@@ -32,17 +33,11 @@ checkpointing:
   monitor: val_mae
   mode: min
   save_every: 10
-  
-early_stopping:
-  patience: 20
-  monitor: val_mae
-  mode: min
-  min_delta: 0.001
 
 subdirectories:
   models: "models"              
   metrics: "metrics"            
   logs: "logs"                  
   predictions: "predictions"    
-  checkpoints: "checkpoints"    
+  checkpoints: "checkpoints"   
   configs: "configs"
