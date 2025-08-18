@@ -6,6 +6,7 @@ Image transformation utilities for AngleCam leaf angle estimation.
 from typing import Tuple, Union
 from pathlib import Path
 import numpy as np
+import random
 
 import cv2
 import albumentations as A
@@ -18,7 +19,6 @@ import logging
 def normalize_to_float32(image, **kwargs):
     """Convert image to float32 and normalize to [0,1] range."""
     return image.astype(np.float32) / 255.0
-
 
 class GetTransforms:
 
@@ -92,7 +92,8 @@ class GetTransforms:
         else:
             transform_list.append(A.Lambda(image=normalize_to_float32))
 
-        # Add tensor conversion
+        #transform_list.append(A.Lambda(image=lambda im, **k: (print('RANGE', im.dtype, float(im.min()), float(im.max())) or im)))
+
         transform_list.append(ToTensorV2())
 
         return A.Compose(transform_list)
@@ -120,6 +121,10 @@ class GetTransforms:
             transform_list.append(self._get_normalization())
         else:
             transform_list.append(A.Lambda(image=normalize_to_float32))
+        
+        #transform_list.append(A.Lambda(image=normalize_to_float32))
+
+        #transform_list.append(A.Lambda(image=lambda im, **k: (print('RANGE', im.dtype, float(im.min()), float(im.max())) or im)))
 
         transform_list.append(ToTensorV2())
 
@@ -127,6 +132,12 @@ class GetTransforms:
 
     def get_transforms_testing(self) -> A.Compose:
         return self.get_transforms_validation()
+        
+    def _probe(self, img, tag):
+        mn, mx = float(img.min()), float(img.max())
+        ch = img.shape[2] if img.ndim == 3 else 1
+        print(f"[{tag}] shape={img.shape} range=({mn:.3f},{mx:.3f})")
+        return img
 
     @staticmethod
     def _get_normalization() -> A.Normalize:
