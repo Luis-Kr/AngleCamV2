@@ -1,8 +1,7 @@
 name: dinov2_vits14
 architecture: dinov2
 pretrained: true
-freeze_backbone: false
-trainable_transformer_blocks: [10, 11]
+trainable_transformer_blocks: [11]
 
 backbone:
   model_name: dinov2_vits14
@@ -21,10 +20,13 @@ output:
   angle_range: [0, 90]
 
 augmentation:
-  normalize: true
   horizontal_flip: 0.5
   resized_crop_scale: [0.8, 1.0]
-  brightness: 0.4
-  contrast: 0.4 
-  grayscale: 0.5
+  brightness: 0.3
+  contrast: 0.3 
+  saturation: 0
   gaussian_noise: 0.02
+  grayscale_prob: 0.5
+  distance_dimming_prob: 0.1
+  d0: 1.0
+  min_intensity: 0.1
