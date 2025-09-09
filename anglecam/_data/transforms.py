@@ -129,9 +129,6 @@ class GetTransforms:
         transform_list.append(ToTensorV2())
 
         return A.Compose(transform_list)
-
-    def get_transforms_testing(self) -> A.Compose:
-        return self.get_transforms_validation()
         
     def _probe(self, img, tag):
         mn, mx = float(img.min()), float(img.max())
@@ -153,7 +150,5 @@ def create_transform_pipeline(config: DictConfig, mode: str = "train") -> A.Comp
         return transform_factory.get_transforms_training()
     elif mode in ["val", "validation"]:
         return transform_factory.get_transforms_validation()
-    elif mode == "test":
-        return transform_factory.get_transforms_testing()
     else:
-        raise ValueError(f"Unsupported mode: {mode}. Use 'train', 'val', or 'test'.")
+        raise ValueError(f"Unsupported mode: {mode}. Use 'train' or 'val'.")
