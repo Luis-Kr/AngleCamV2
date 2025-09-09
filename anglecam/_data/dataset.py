@@ -23,7 +23,7 @@ class BaseAngleCamDataset(Dataset):
     Base dataset class providing common functionality for AngleCam datasets.
 
     Handles image loading, label processing, and provides consistent interfaces
-    for training, validation, and testing workflows.
+    for traininga and validation workflows.
     """
 
     def __init__(
@@ -41,12 +41,6 @@ class BaseAngleCamDataset(Dataset):
             transform: Image transformation pipeline
         """
         self.data_dir = Path(data_dir)
-        self.testing_dir_calathea = (
-            Path(data_dir).parent / "testing" / "calathea_ornata"
-        )
-        self.testing_dir_maranta = (
-            Path(data_dir).parent / "testing" / "maranta_leuconeura"
-        )
         self.dataframe = dataframe.copy()
         self.transform = transform
 
@@ -72,46 +66,6 @@ class BaseAngleCamDataset(Dataset):
         """Load and validate image file"""
         filename = self.dataframe.iloc[idx]["filename"]
         image_path = self.data_dir / filename
-
-        try:
-            image = Image.open(image_path)
-            # Ensure consistent three channel format for all images
-            three_channel_image = image.convert("RGB")
-
-            if three_channel_image.mode != "RGB":
-                raise ValueError(
-                    f"Failed to convert to three channel mode. Current mode: {three_channel_image.mode}"
-                )
-
-            return three_channel_image
-
-        except Exception as e:
-            raise RuntimeError(f"Failed to load image {image_path}: {str(e)}")
-
-    def _load_image_calathea(self, idx: int) -> Image.Image:
-        """Load and validate image file"""
-        filename = self.dataframe.iloc[idx]["filename"]
-        image_path = self.testing_dir_calathea / filename
-
-        try:
-            image = Image.open(image_path)
-            # Ensure consistent three channel format for all images
-            three_channel_image = image.convert("RGB")
-
-            if three_channel_image.mode != "RGB":
-                raise ValueError(
-                    f"Failed to convert to three channel mode. Current mode: {three_channel_image.mode}"
-                )
-
-            return three_channel_image
-
-        except Exception as e:
-            raise RuntimeError(f"Failed to load image {image_path}: {str(e)}")
-
-    def _load_image_maranta(self, idx: int) -> Image.Image:
-        """Load and validate image file"""
-        filename = self.dataframe.iloc[idx]["filename"]
-        image_path = self.testing_dir_maranta / filename
 
         try:
             image = Image.open(image_path)
@@ -372,7 +326,7 @@ class AngleCamTrainingDataset(BaseAngleCamDataset):
 
 
 class AngleCamValidationDataset(BaseAngleCamDataset):
-    """Validation dataset using labeled LADs."""
+    """Validation dataset using labeled LIADs."""
 
     def __init__(
         self,
@@ -434,185 +388,59 @@ class AngleCamValidationDataset(BaseAngleCamDataset):
             raise RuntimeError(f"Error processing validation sample {idx}: {str(e)}")
 
 
-class AngleCamTestDatasetCalathea(BaseAngleCamDataset):
-    """Test dataset for inference."""
-
-    def __init__(
-        self,
-        data_dir: Union[str, Path],
-        dataframe: pd.DataFrame,
-        transform: Optional[Callable] = None,
-    ) -> None:
-        """
-        Initialize test dataset.
-
-        Args:
-            data_dir: Directory containing test data
-            dataframe: DataFrame with test sample information
-            transform: Image transformation pipeline
-        """
-        super().__init__(data_dir, dataframe, transform)
-
-    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, str, int]:
-        """
-        Get test sample for inference.
-
-        Args:
-            idx: Sample index
-
-        Returns:
-            Tuple of (image_tensor, image_path, index)
-        """
-        try:
-            # Load and transform image
-            image = self._load_image_calathea(idx)
-
-            # Apply transforms if provided
-            if self.transform:
-                if hasattr(self.transform, "__call__"):
-                    # Albumentations transform
-                    transformed = self.transform(image=np.array(image))
-                    image_tensor = transformed["image"]
-                else:
-                    # Torchvision transforms
-                    image_tensor = self.transform(image)
-            else:
-                # Default to tensor conversion
-                image_tensor = transforms.ToTensor()(image)
-
-            image_path = str(
-                self.testing_dir_calathea / self.dataframe.iloc[idx]["filename"]
-            )
-            label = self.dataframe.iloc[idx]["tls_average_angle"]
-
-            return image_tensor, label, image_path, idx
-
-        except Exception as e:
-            raise RuntimeError(f"Error processing test sample {idx}: {str(e)}")
-
-
-class AngleCamTestDatasetMaranta(BaseAngleCamDataset):
-    """Test dataset for inference."""
-
-    def __init__(
-        self,
-        data_dir: Union[str, Path],
-        dataframe: pd.DataFrame,
-        transform: Optional[Callable] = None,
-    ) -> None:
-        """
-        Initialize test dataset.
-
-        Args:
-            data_dir: Directory containing test data
-            dataframe: DataFrame with test sample information
-            transform: Image transformation pipeline
-        """
-        super().__init__(data_dir, dataframe, transform)
-
-    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, str, int]:
-        """
-        Get test sample for inference.
-
-        Args:
-            idx: Sample index
-
-        Returns:
-            Tuple of (image_tensor, image_path, index)
-        """
-        try:
-            # Load and transform image
-            image = self._load_image_maranta(idx)
-
-            # Apply transforms if provided
-            if self.transform:
-                if hasattr(self.transform, "__call__"):
-                    # Albumentations transform
-                    transformed = self.transform(image=np.array(image))
-                    image_tensor = transformed["image"]
-                else:
-                    # Torchvision transforms
-                    image_tensor = self.transform(image)
-            else:
-                # Default to tensor conversion
-                image_tensor = transforms.ToTensor()(image)
-
-            image_path = str(
-                self.testing_dir_maranta / self.dataframe.iloc[idx]["filename"]
-            )
-            label = self.dataframe.iloc[idx]["tls_average_angle"]
-
-            return image_tensor, label, image_path, idx
-
-        except Exception as e:
-            raise RuntimeError(f"Error processing test sample {idx}: {str(e)}")
-
-
 def load_dataframes(
     config: DictConfig,
     logger: Optional[logging.Logger] = None,
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
-    Load training, validation, and test dataframes from config-specified paths.
+    Load training and validation from config-specified paths.
 
     Args:
         config: Hydra configuration containing data paths
         logger: Optional logger for reporting
 
     Returns:
-        Tuple of (train_df, val_df, test_df)
+        Tuple of (train_df, val_df)
     """
     # Use relative paths from project root
     train_path = root_dir / config.data.train_csv
     val_path = root_dir / config.data.val_csv
-    test_path = root_dir / config.data.test_csv
 
     # Load dataframes
     train_df = pd.read_csv(train_path, sep=",")
     val_df = pd.read_csv(val_path, sep=",")
-    test_df = pd.read_csv(test_path, sep=",")
-
-    # Split test_df into calathea and maranta
-    test_df_calathea = test_df[test_df["plant_name"] == "Calathea ornata"]
-    test_df_maranta = test_df[test_df["plant_name"] == "Maranta leuconeura"]
 
     # Reset indices for clean datasets
     train_df = train_df.reset_index(drop=True)
     val_df = val_df.reset_index(drop=True)
-    test_df_calathea = test_df_calathea.reset_index(drop=True)
-    test_df_maranta = test_df_maranta.reset_index(drop=True)
 
     if logger:
         logger.info(f"Loaded {len(train_df)} training samples from {train_path}")
         logger.info(f"Loaded {len(val_df)} validation samples from {val_path}")
-        logger.info(f"Loaded {len(test_df_calathea)} test samples from {test_path}")
-        logger.info(f"Loaded {len(test_df_maranta)} test samples from {test_path}")
 
-    return train_df, val_df, test_df_calathea, test_df_maranta
+    return train_df, val_df
 
 
 def get_data_loaders(
     config: DictConfig,
     train_transform: Optional[Callable] = None,
     val_transform: Optional[Callable] = None,
-    test_transform: Optional[Callable] = None,
     logger: Optional[logging.Logger] = None,
 ) -> Tuple[DataLoader, Optional[DataLoader], Optional[DataLoader]]:
     """
-    Create PyTorch DataLoaders for training, validation, and testing using Hydra config.
+    Create PyTorch DataLoaders for training and validation using Hydra config.
 
     Args:
         config: Hydra configuration object
         train_transform: Training data augmentation pipeline
         val_transform: Validation data preprocessing pipeline
-        test_transform: Test data preprocessing pipeline (defaults to val_transform)
         logger: Optional logger for reporting
 
     Returns:
-        Tuple of (train_loader, val_loader, test_loader)
+        Tuple of (train_loader, val_loader)
     """
     # Load dataframes from config
-    train_df, val_df, test_df_calathea, test_df_maranta = load_dataframes(
+    train_df, val_df = load_dataframes(
         config, logger
     )
 
@@ -646,14 +474,6 @@ def get_data_loaders(
         data_dir=data_dir, dataframe=val_df, transform=val_transform
     )
 
-    test_dataset_calathea = AngleCamTestDatasetCalathea(
-        data_dir=data_dir, dataframe=test_df_calathea, transform=val_transform
-    )
-
-    test_dataset_maranta = AngleCamTestDatasetMaranta(
-        data_dir=data_dir, dataframe=test_df_maranta, transform=val_transform
-    )
-
     # Create data loaders
     train_loader = DataLoader(
         train_dataset,
@@ -676,35 +496,15 @@ def get_data_loaders(
         persistent_workers=num_workers > 0,
     )
 
-    test_loader_calathea = DataLoader(
-        test_dataset_calathea,
-        batch_size=1,
-        shuffle=False,
-        num_workers=num_workers,
-        pin_memory=pin_memory,
-        persistent_workers=num_workers > 0,
-    )
-
-    test_loader_maranta = DataLoader(
-        test_dataset_maranta,
-        batch_size=1,
-        shuffle=False,
-        num_workers=num_workers,
-        pin_memory=pin_memory,
-        persistent_workers=num_workers > 0,
-    )
-
     if logger:
         logger.info(f"Created data loaders:")
         logger.info(
             f"  - Training: {len(train_loader)} batches (batch_size={batch_size})"
         )
         logger.info(f"  - Validation: {len(val_loader)} batches (batch_size=1)")
-        logger.info(f"  - Test: {len(test_loader_calathea)} batches (batch_size=1)")
-        logger.info(f"  - Test: {len(test_loader_maranta)} batches (batch_size=1)")
         logger.info(f"  - Data directory: {data_dir}")
 
-    return train_loader, val_loader, test_loader_calathea, test_loader_maranta
+    return train_loader, val_loader
 
 
 def worker_init_fn(worker_id):
