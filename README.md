@@ -6,7 +6,6 @@ regular photos. Works with everything from smartphone snapshots to research-grad
 <div align="center">
   <video width="600" controls>
     <source src="animation/maranta_leuconeura_timelapse.mp4" type="video/mp4">
-    <p>Your browser does not support the video tag. <a href="animation/maranta_leuconeura_timelapse.mp4">Download the video</a> to see leaf movement dynamics.</p>
   </video>
   <br>
   <em>Time-lapse showing diurnal leaf movement patterns in Maranta leuconeura tracked by AngleCam V2</em>
