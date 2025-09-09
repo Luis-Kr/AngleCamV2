@@ -41,3 +41,6 @@ subdirectories:
   predictions: "predictions"    
   checkpoints: "checkpoints"   
   configs: "configs"
+
+# Output dir
+output_dir: data/model/output
