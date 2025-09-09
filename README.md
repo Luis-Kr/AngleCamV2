@@ -3,10 +3,19 @@
 AngleCam V2 is a deep learning framework for estimating leaf angle distributions from images. It can track how plants move their leaves throughout the day and night, using nothing more than 
 regular photos. Works with everything from smartphone snapshots to research-grade time-lapse cameras across many plant species.
 
+<div align="center">
+  <video width="600" controls>
+    <source src="animation/maranta_leuconeura_timelapse.mp4" type="video/mp4">
+    <p>Your browser does not support the video tag. <a href="animation/maranta_leuconeura_timelapse.mp4">Download the video</a> to see leaf movement dynamics.</p>
+  </video>
+  <br>
+  <em>Time-lapse showing diurnal leaf movement patterns in Maranta leuconeura tracked by AngleCam V2</em>
+</div>
+
 ## Installation
 
 ### Prerequisites
-- [Conda](https://docs.conda.io/en/latest/miniconda.html)
+- <a href="https://docs.conda.io/en/latest/miniconda.html" target="_blank">Conda</a>
 
 ### Quick Setup
 
@@ -34,7 +43,7 @@ regular photos. Works with everything from smartphone snapshots to research-grad
 
 ## Data Setup
 
-Download the complete dataset and pre-trained models from [Zenodo](https://zenodo.org/records/17086253) (44.5 GB):
+Download the complete dataset and pre-trained models from <a href="https://zenodo.org/records/17086253" target="_blank">Zenodo</a> (44.5 GB):
 
 1. **Download and extract the dataset:**
    ```bash
@@ -150,13 +159,8 @@ The tool provides an interface for manually annotating leaf angles in images.
 ## Model Architecture
 
 - **Backbone**: DINOv2 ViT-S/14 (384-dimensional features)
-- **Head**: Linear → Dropout → GELU → Linear → Softmax
+- **Head**: Dropout → Linear → Dropout → GELU → Linear → Softmax
 - **Output**: 43-bin probability distribution (0-90° in 2° steps)
-- **Training**: Mixed RGB/NIR modality with data augmentation
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Support
 
