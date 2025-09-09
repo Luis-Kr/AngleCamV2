@@ -4,9 +4,7 @@ AngleCam V2 is a deep learning framework for estimating leaf angle distributions
 regular photos. Works with everything from smartphone snapshots to research-grade time-lapse cameras across many plant species.
 
 <div align="center">
-  <video width="600" controls>
-    <source src="animation/maranta_leuconeura_timelapse.mp4" type="video/mp4">
-  </video>
+  <img src="animation/maranta_leuconeura_timelapse.gif" width="600" alt="Diurnal leaf movement in Maranta leuconeura">
   <br>
   <em>Time-lapse showing diurnal leaf movement patterns in Maranta leuconeura tracked by AngleCam V2</em>
 </div>
