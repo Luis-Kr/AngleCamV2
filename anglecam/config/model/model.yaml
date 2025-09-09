@@ -2,6 +2,8 @@ name: dinov2_vits14
 architecture: dinov2
 pretrained: true
 trainable_transformer_blocks: [11]
+freeze_backbone: true
+reset_head: false
 
 backbone:
   model_name: dinov2_vits14
