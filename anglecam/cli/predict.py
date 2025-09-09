@@ -8,34 +8,36 @@ from omegaconf import DictConfig
 import logging
 from pathlib import Path
 import sys
+import json
 
-sys.path.append(str(Path(__file__).parent.parent))
+PROJECT_DIR = Path(__file__).parent.parent.parent
+sys.path.append(str(PROJECT_DIR))
 
-from anglecam import AngleCam
+from anglecam.main import AngleCam
 
 log = logging.getLogger(__name__)
 
-
-@hydra.main(
-    version_base=None, config_path="../anglecam/config", config_name="inference"
-)
+@hydra.main(version_base=None, config_path="../config", config_name="main")
 def predict(config: DictConfig) -> None:
     """
     Main prediction function.
     """
     log.info("Starting AngleCam prediction")
-
-    # Validate required config
-    if not hasattr(config, "model_path") or not hasattr(config, "input_path"):
-        raise ValueError("Configuration must specify 'model_path' and 'input_path'")
+    
+    output_dir = PROJECT_DIR / "data" / "model" / "final_output" / "best_model_output"
+    model_path = output_dir / "checkpoints" / "best_model_val_loss.pth"
 
     # Load model from checkpoint
-    log.info(f"Loading model from: {config.model_path}")
-    model = AngleCam.from_checkpoint(config.model_path)
+    log.info(f"Loading model from: {model_path}")
+    model = AngleCam.from_checkpoint(model_path)
 
     # Run predictions
-    log.info(f"Running predictions on: {config.input_path}")
-    results = model.predict(config.input_path)
+    #input_dir = PROJECT_DIR / config.input_path
+    #input_dir = "/mnt/gsdata/projects/other/anglecam_arbofun/data_2023_arbofun_brinno_timeseries"
+    input_dir = "/mnt/gsdata/projects/other/anglecam_arbofun/data_2023_arbofun_brinno_timeseries_missing/339_Thu_occ"
+    
+    log.info(f"Running predictions on: {input_dir}")
+    results = model.predict(str(input_dir))
 
     # Handle results
     if isinstance(results, list):
@@ -43,6 +45,11 @@ def predict(config: DictConfig) -> None:
     else:
         log.info(f"Predicted angle: {results['predicted_angle']:.2f}°")
 
+    # Save the results to a JSON file
+    output_path = PROJECT_DIR / "data" / "inference" / "arbofun" / "339_Thu_occ_anglecam_inference.json"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w") as f:
+        json.dump(results, f, indent=4)
 
 if __name__ == "__main__":
     predict()
