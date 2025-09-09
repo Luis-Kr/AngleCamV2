@@ -1,0 +1,8 @@
+# Input settings - can be overridden via command line
+pretrained_model_path: data/model/final_output/best_model_output/checkpoints/best_model_val_loss.pth # Path to the pretrained model
+image_path: examples/images # Path to the images to be processed
+inference_output_path: data/inference/example_inference # Path to the output directory
+
+# Inference settings
+batch_size: 8 # Number of images to process in parallel - should be adjusted based on the available memory of the GPU
+num_workers: 8 # Number of workers to use for loading the images - should be adjusted based on the available CPU cores
