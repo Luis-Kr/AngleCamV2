@@ -11,6 +11,6 @@ seed: 1234 #42 #1234
 
 # Data paths
 data:
-  train_csv: data/model/input/training.csv
-  val_csv: data/model/input/validation.csv
-  data_dir: data/images/training_validation
+  train_csv: data/01_Training_Validation_Data/splits/training.csv
+  val_csv: data/01_Training_Validation_Data/splits/validation.csv
+  data_dir: data/01_Training_Validation_Data/image_data
