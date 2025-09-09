@@ -23,6 +23,8 @@ venv/
 
 # Data files
 data/
+data_old/
 .cursor/
 outputs/
 manuscript/
+examples/images/*
