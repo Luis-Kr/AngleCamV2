@@ -16,7 +16,6 @@ from anglecam.main import AngleCam
 
 log = logging.getLogger(__name__)
 
-
 @hydra.main(version_base=None, config_path="../config", config_name="main")
 def train(config: DictConfig) -> None:
     """
