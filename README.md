@@ -56,7 +56,7 @@ After downloading the dataset from Zenodo, place the pre-trained model weights i
 mkdir -p data/checkpoint
 
 # Copy or move the pre-trained model to the expected location
-mv -v path/to/downloaded/AngleCamV2.pth data/checkpoint/AngleCamV2.pth
+mv -v path/to/downloaded/AngleCamV2.pth data/checkpoint/
 ```
 
 ### Custom Model Weights
@@ -65,7 +65,7 @@ If you have your own trained model weights, you can either:
 **Option 1: Use the default location**
 ```bash
 # Place your model in the default checkpoint directory
-mv -v your_model.pth data/checkpoint/AngleCamV2.pth
+mv -v your_model.pth data/checkpoint/
 ```
 
 
