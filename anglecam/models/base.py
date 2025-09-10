@@ -39,13 +39,11 @@ class DINOv2_AngleCam(nn.Module):
             nn.GELU(),
             nn.Linear(
                 self.cfg.model.head.hidden_dims[0], self.cfg.model.output.num_bins
-            )
+            ),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # Forward pass through the backbone
         x = self.backbone(x)
-        # Forward pass through the head
         x = self.head(x)
         x = F.softmax(x, dim=1)
         return x
