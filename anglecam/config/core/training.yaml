@@ -24,7 +24,7 @@ gradient_clipping:
   norm_type: 2
 
 dataloader:
-  num_workers: 20
+  num_workers: 4
   pin_memory: true
   
 checkpointing:
