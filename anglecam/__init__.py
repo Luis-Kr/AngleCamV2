@@ -1,5 +1,5 @@
 """
-AngleCam - Deep Learning Framework for Leaf Angle Distribution Estimation
+AngleCam - Deep learning framework for leaf inclination angle distribution estimation
 
 """
 
