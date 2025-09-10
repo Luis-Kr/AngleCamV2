@@ -73,16 +73,17 @@ mv -v your_model.pth data/checkpoint/
 
 ### Python API
 ```python
+from omegaconf import OmegaConf
 from anglecam.main import AngleCam
 
-# Initialize from config
-model = AngleCam.from_checkpoint(CHECKPOINT_PATH)
+# Load config manually
+config = OmegaConf.load("anglecam/config/main.yaml")
 
-# Make predictions on a single image
-predictions = model.predict("path/to/image.jpg")
+# Load model
+model = AngleCam.from_checkpoint("data/checkpoint/AngleCamV2.pth", config)
 
-# Predict on multiple images
-predictions = model.predict_batch(["image1.jpg", "image2.jpg"])
+# Make predictions
+results = model.predict("path/to/images/")
 ```
 
 ### Command Line Interface
