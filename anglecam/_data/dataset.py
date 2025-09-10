@@ -1,7 +1,7 @@
 import time
 import random
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Union, Callable, Any
+from typing import Tuple, Optional, Union, Callable
 import logging
 
 import torch
@@ -391,7 +391,7 @@ class AngleCamValidationDataset(BaseAngleCamDataset):
 def load_dataframes(
     config: DictConfig,
     logger: Optional[logging.Logger] = None,
-) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Load training and validation from config-specified paths.
 
@@ -426,7 +426,7 @@ def get_data_loaders(
     train_transform: Optional[Callable] = None,
     val_transform: Optional[Callable] = None,
     logger: Optional[logging.Logger] = None,
-) -> Tuple[DataLoader, Optional[DataLoader], Optional[DataLoader]]:
+) -> Tuple[DataLoader, DataLoader]:
     """
     Create PyTorch DataLoaders for training and validation using Hydra config.
 
@@ -440,9 +440,7 @@ def get_data_loaders(
         Tuple of (train_loader, val_loader)
     """
     # Load dataframes from config
-    train_df, val_df = load_dataframes(
-        config, logger
-    )
+    train_df, val_df = load_dataframes(config, logger)
 
     # Get data directory from config (relative to project root)
     data_dir = root_dir / config.data.data_dir
@@ -517,8 +515,6 @@ def worker_init_fn(worker_id):
 
 
 # Convenience function for backward compatibility
-def create_data_loaders(
-    config: DictConfig, **kwargs
-) -> Tuple[DataLoader, Optional[DataLoader], Optional[DataLoader]]:
+def create_data_loaders(config: DictConfig, **kwargs) -> Tuple[DataLoader, DataLoader]:
     """Backward compatibility function that wraps get_data_loaders."""
     return get_data_loaders(config, **kwargs)
