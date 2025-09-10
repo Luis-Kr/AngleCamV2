@@ -1,24 +1,24 @@
-# Mark Jupyter notebooks as documentation (not counted in language stats)
+# Mark Jupyter notebooks as documentation
 *.ipynb linguist-documentation
 
-# Mark other assets as documentation/vendored
+# Other assets
 manuscript/** linguist-documentation
 notebooks/** linguist-documentation
 examples/** linguist-documentation
 docs/** linguist-documentation
 *.md linguist-documentation
 
-# Ensure Python files are detected properly
+# Python files
 *.py linguist-detectable=true
 anglecam/**/*.py linguist-detectable=true
 
-# Mark data files as vendored (not counted)
+# Data files
 data/** linguist-vendored
 *.csv linguist-vendored
 *.json linguist-vendored
 *.npy linguist-vendored
 *.pkl linguist-vendored
 
-# Mark config files appropriately
+# Config files
 *.yaml linguist-detectable=true
 *.yml linguist-detectable=true
