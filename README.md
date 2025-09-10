@@ -45,6 +45,30 @@ Download the complete dataset and pre-trained models from <a href="https://zenod
    cp -r AngleCamV2_Dataset/* data/
    ```
 
+
+## Model Weights Setup
+
+### Pre-trained Model
+After downloading the dataset from Zenodo, place the pre-trained model weights in the correct location:
+
+```bash
+# Create the checkpoint directory if it doesn't exist
+mkdir -p data/checkpoint
+
+# Copy or move the pre-trained model to the expected location
+mv -v path/to/downloaded/AngleCamV2.pth data/checkpoint/AngleCamV2.pth
+```
+
+### Custom Model Weights
+If you have your own trained model weights, you can either:
+
+**Option 1: Use the default location**
+```bash
+# Place your model in the default checkpoint directory
+mv -v your_model.pth data/checkpoint/AngleCamV2.pth
+```
+
+
 ## Quick Start
 
 ### Python API
@@ -77,12 +101,12 @@ Loads the pre-trained AngleCamV2 model and retrains it on new labeled images. Us
 
 **Make predictions:**
 ```bash
-python -m anglecam.cli.predict image_path=path/to/image.jpg
+python -m anglecam.cli.predict inference.image_path=path/to/image.jpg
 ```
 
 **Predict on multiple images:**
 ```bash
-python -m anglecam.cli.predict image_path=path/to/images/
+python -m anglecam.cli.predict inference.image_path=path/to/images/
 ```
 
 ### Essential Configuration Options
@@ -107,8 +131,8 @@ python -m anglecam.cli.retrain data.train_csv=new_species.csv                   
 **Model settings:**
 ```bash
 python -m anglecam.cli.train model.head.dropout=0.3        # Adjust dropout rate
-python -m anglecam.cli.train training.lr=1e-5              # Set learning rate
-python -m anglecam.cli.predict inference.checkpoint_path=my_model.pth            # Use custom model weights
+python -m anglecam.cli.train training.optimizer.lr=1e-5              # Set learning rate
+python -m anglecam.cli.predict inference.pretrained_model_path=my_model.pth            # Use custom model weights
 ```
 
 ## Training Data Format
