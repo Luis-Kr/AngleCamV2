@@ -63,7 +63,10 @@ class AngleCamTrainer:
             )
 
         # Scheduler
-        if hasattr(self.config, "scheduler"):
+        if (
+            hasattr(self.config.training, "scheduler")
+            and self.config.training.scheduler is not None
+        ):
             scheduler_config = self.config.training.scheduler
             if scheduler_config.name == "ReduceLROnPlateau":
                 self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -79,6 +82,10 @@ class AngleCamTrainer:
                 raise ValueError(
                     f"Unsupported scheduler: {scheduler_config.name}. Only ReduceLROnPlateau supported."
                 )
+        else:
+            self.logger.info(
+                "No scheduler configured - training without learning rate scheduling"
+            )
 
         # Checkpointer
         output_dir = Path(self.config.training.output_dir) / "checkpoints"
@@ -98,7 +105,7 @@ class AngleCamTrainer:
         for batch_idx, (images, targets, _, _) in enumerate(progress_bar):
             images = images.to(self.device)
             targets = targets.to(self.device)
-            
+
             # Forward pass
             self.optimizer.zero_grad()
             outputs = model(images)
@@ -188,7 +195,7 @@ class AngleCamTrainer:
         angles = torch.linspace(
             0, 90, probabilities.shape[1], device=probabilities.device
         )
-        
+
         # # Make sure the probabilities sum to 1
         # probabilities = probabilities / torch.sum(probabilities, dim=1, keepdim=True)
 
@@ -215,12 +222,10 @@ class AngleCamTrainer:
         train_transform = create_transform_pipeline(self.config, mode="train")
         val_transform = create_transform_pipeline(self.config, mode="val")
 
-        train_loader, val_loader = (
-            get_data_loaders(
-                config=self.config,
-                train_transform=train_transform,
-                val_transform=val_transform,
-            )
+        train_loader, val_loader = get_data_loaders(
+            config=self.config,
+            train_transform=train_transform,
+            val_transform=val_transform,
         )
 
         # Training parameters
