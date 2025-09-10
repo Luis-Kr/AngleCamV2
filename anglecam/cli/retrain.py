@@ -50,7 +50,7 @@ def retrain(config: DictConfig) -> None:
         logger.info(f"New validation data: {val_csv}")
 
     # Load model from checkpoint (this loads the config from checkpoint)
-    model = AngleCam.from_checkpoint(str(checkpoint_path))
+    model = AngleCam.from_checkpoint(str(checkpoint_path), config)
 
     # Start retraining
     results = model.retrain(
