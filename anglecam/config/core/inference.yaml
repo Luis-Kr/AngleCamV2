@@ -1,6 +1,6 @@
 # Input settings - can be overridden via command line
-pretrained_model_path: data/checkpoint/AngleCamV2 # Path to the pretrained model
-image_path: examples/images # Path to the images to be processed
+pretrained_model_path: data/checkpoint/AngleCamV2.pth # Path to the pretrained model
+image_path: examples/images # Path to the image(s) to be processed
 output_dir: data/inference # Path to the output directory
 
 # Inference settings
