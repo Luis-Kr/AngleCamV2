@@ -16,6 +16,7 @@ dependencies:
   - matplotlib>=3.7.0
   - opencv>=4.8.0
   - pillow>=10.0.0
+  - opencv-python-headless>=4.8.0
   - pip
   
   - pip:
@@ -26,4 +27,3 @@ dependencies:
     - open3d>=0.18.0
     - laspy>=2.5.0
     - numba>=0.58.0
-    - opencv-python-headless>=4.8.0
