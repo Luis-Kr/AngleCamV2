@@ -31,7 +31,7 @@ regular photos. Works with everything from smartphone snapshots to research-grad
 
 4. **Verify installation:**
    ```bash
-   python -c "import anglecam_v2; print('Installation successful!')"
+   python -c "import anglecam; print('Installation successful!')"
    ```
 
 ## Data Setup
