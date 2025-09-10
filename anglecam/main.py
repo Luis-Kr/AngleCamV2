@@ -24,26 +24,34 @@ class AngleCam:
     Provides unified API for training and prediction.
     """
 
-    def __init__(self, config: DictConfig):
-        """Initialize AngleCam with Hydra configuration."""
+    def __init__(self, config: DictConfig, mode: str = "training"):
+        """Initialize AngleCam."""
         self.config = config
         self.model = None
         self.trainer = None
         self.predictor = None
         self.logger = None
+        self.mode = mode
 
         # Setup core components
         self._setup_logging()
         self._setup_reproducibility()
         self._setup_device()
+        self._validate_config()
 
     def _setup_logging(self) -> None:
-        """Setup logging system."""
+        """Setup logging."""
+        if self.mode == "inference":
+            output_dir = self.config.inference.output_dir
+            log_context = "inference"
+        else:
+            output_dir = self.config.training.output_dir
+            log_context = "training"
 
-        log_file = Path(self.config.training.output_dir) / "anglecam.log"
+        log_file = Path(output_dir) / "anglecam.log"
         self.logger = setup_logger(log_file, name="anglecam")
-        self.logger.info("AngleCam initialized with Hydra configuration")
-        self.logger.info(f"Output directory: {self.config.training.output_dir}")
+        self.logger.info("::: AngleCam initialized :::")
+        self.logger.info(f"Log directory ({log_context}): {output_dir}")
 
     def _setup_reproducibility(self) -> None:
         """Setup reproducibility settings."""
@@ -59,6 +67,18 @@ class AngleCam:
         else:
             self.device = device_config
         self.logger.info(f"Using device: {self.device}")
+
+    def _validate_config(self) -> None:
+        """Validate critical configuration parameters."""
+        required_paths = [
+            self.config.data.train_csv,
+            self.config.data.val_csv,
+            self.config.data.data_dir,
+        ]
+
+        for path in required_paths:
+            if not Path(path).exists():
+                raise FileNotFoundError(f"Required path not found: {path}")
 
     def _get_model(self) -> DINOv2_AngleCam:
         """Get or create model instance."""
@@ -103,7 +123,7 @@ class AngleCam:
 
         self.logger.info("Training completed successfully")
         return results
-    
+
     def retrain(
         self,
         checkpoint_path: str,
@@ -112,11 +132,11 @@ class AngleCam:
         freeze_backbone: bool = True,
         reset_head: bool = False,
         save_path: str = None,
-        **kwargs
+        **kwargs,
     ) -> Dict[str, Any]:
         """
         Retrain model from checkpoint with optional new data.
-        
+
         Args:
             checkpoint_path: Path to checkpoint file to load
             train_csv: Optional new training CSV (uses config default if None)
@@ -125,53 +145,55 @@ class AngleCam:
             reset_head: Whether to reset head weights
             save_path: Path to save the retrained model
             **kwargs: Additional training parameters
-            
+
         Returns:
             Training results dictionary
         """
         self.logger.info(f"Starting retraining from checkpoint: {checkpoint_path}")
-        
+
         # Update data paths if new ones provided
         if train_csv is not None:
             self.config.data.train_csv = train_csv
             self.logger.info(f"Using new training data: {train_csv}")
-        
+
         if val_csv is not None:
             self.config.data.val_csv = val_csv
             self.logger.info(f"Using new validation data: {val_csv}")
-        
+
         # Apply retraining strategy to model
         self._apply_retraining_strategy(freeze_backbone, reset_head)
-        
+
         # Update output directory to avoid overwriting original results
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        
+
         # Handle different config structures for output_dir
-        if hasattr(self.config, 'training') and hasattr(self.config.training, 'output_dir'):
+        if hasattr(self.config, "training") and hasattr(
+            self.config.training, "output_dir"
+        ):
             original_output = self.config.training.output_dir
-        elif hasattr(self.config, 'output_dir'):
+        elif hasattr(self.config, "output_dir"):
             original_output = self.config.output_dir
         else:
             # Fallback default
             original_output = "data/model/output"
             self.logger.warning("No output_dir found in config, using default")
-        
+
         retrain_output = f"{original_output}_retrain_{timestamp}"
         self.config.training.output_dir = retrain_output
         self.logger.info(f"Retraining output directory: {retrain_output}")
-        
+
         # Create new trainer (this will use the updated config)
         self.trainer = AngleCamTrainer(
             config=self.config, device=self.device, logger=self.logger
         )
-        
+
         # Run training with the pretrained model
         results = self.trainer.train(self.model, **kwargs)
         self.model = results["model"]
-        
+
         # Save model
         self.save(save_path)
-        
+
         self.logger.info("Retraining completed successfully")
         return results
 
@@ -234,16 +256,16 @@ class AngleCam:
 
     @classmethod
     def from_checkpoint(
-        cls, checkpoint_path: str, config_overrides: Optional[Dict] = None
+        cls,
+        checkpoint_path: str,
+        current_config: DictConfig,
+        config_overrides: Optional[Dict] = None,
     ) -> "AngleCam":
         """Load trained AngleCam from checkpoint."""
         checkpoint = torch.load(checkpoint_path, map_location="cpu")
-
-        # Load config from checkpoint
-        if isinstance(checkpoint["config"], str):
-            config = OmegaConf.create(checkpoint["config"])
-        else:
-            config = checkpoint["config"]
+        
+        # Use current config as base
+        config = current_config
 
         # Apply any config overrides
         if config_overrides:
@@ -251,16 +273,18 @@ class AngleCam:
             config = OmegaConf.merge(config, override_config)
 
         # Create instance
-        instance = cls(config)
+        instance = cls(config, mode="inference")
 
         # Load model
         instance.model = DINOv2_AngleCam(config)
         instance.model.load_state_dict(checkpoint["model_state_dict"])
         instance.model = instance.model.to(instance.device)
-        
+
         return instance
-    
-    def _apply_retraining_strategy(self, freeze_backbone: bool, reset_head: bool) -> None:
+
+    def _apply_retraining_strategy(
+        self, freeze_backbone: bool, reset_head: bool
+    ) -> None:
         """Apply retraining strategy to the model."""
         if freeze_backbone:
             # Freeze all backbone parameters
@@ -271,7 +295,7 @@ class AngleCam:
             # Use the trainable blocks from config
             for param in self.model.backbone.parameters():
                 param.requires_grad = False
-            
+
             # Unfreeze specified transformer blocks
             for name, param in self.model.backbone.named_parameters():
                 for block_idx in self.config.model.trainable_transformer_blocks:
@@ -279,13 +303,13 @@ class AngleCam:
                         param.requires_grad = True
                         break
             self.logger.info("Backbone partially unfrozen based on config")
-        
+
         if reset_head:
             # Reinitialize head layers
             self.model.head = self.model._create_head()
             self.model.head = self.model.head.to(self.device)
             self.logger.info("Head layers reinitialized")
-        
+
         # Always ensure head is trainable
         for param in self.model.head.parameters():
             param.requires_grad = True
