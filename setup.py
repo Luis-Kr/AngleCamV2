@@ -1,6 +1,7 @@
 from setuptools import setup, find_packages
 import os
 
+
 def create_data_directories():
     """Create necessary data directories for AngleCam."""
     directories = [
@@ -9,9 +10,9 @@ def create_data_directories():
         "data/01_Training_Validation_Data",
         "data/01_Training_Validation_Data/image_data",
         "data/01_Training_Validation_Data/splits",
-        "data/outputs"
+        "data/outputs",
     ]
-    
+
     for directory in directories:
         os.makedirs(directory, exist_ok=True)
         # Create .gitkeep file to ensure directory is tracked
@@ -19,6 +20,7 @@ def create_data_directories():
         if not os.path.exists(gitkeep_path):
             with open(gitkeep_path, "w") as f:
                 f.write("")
+
 
 # Create directories when package is installed
 create_data_directories()
