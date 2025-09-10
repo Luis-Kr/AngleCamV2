@@ -28,7 +28,7 @@ augmentation:
   contrast: 0.3 
   saturation: 0
   gaussian_noise: 0.02
-  grayscale_prob: 0.5
-  distance_dimming_prob: 0.1
+  grayscale_prob: 0.0
+  distance_dimming_prob: 0.0
   d0: 1.0
   min_intensity: 0.1
