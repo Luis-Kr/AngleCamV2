@@ -138,7 +138,7 @@ image_002.png,Tilia platyphyllos
 image_003.png,Quercus robur
 ```
 
-Images should be placed in the directory specified by `data.data_dir` in the config (default: `data/01_Training_Validation_Data/image_data`). 
+Images and labels (`_sim.csv`) should be placed in the directory specified by `data.data_dir` in the config (default: `data/01_Training_Validation_Data/image_data`). 
 
 ## Configuration
 
