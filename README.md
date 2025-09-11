@@ -44,7 +44,7 @@ Download the complete dataset including the labels from <a href="https://zenodo.
 unzip AngleCamV2_Dataset.zip
 
 # After downloading from Zenodo, move it to:
-cp -r AngleCamV2_Dataset/* data/
+mv -v AngleCamV2_Dataset/* data/
 ```
 
 ### For prediction and re-training only
