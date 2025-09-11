@@ -11,7 +11,6 @@ For each image, **20 leaf measurements should be completed**. For each leaf, det
 1. **Average leaf angle** of the leaf surface (relative to the entire leaf surface), where 0° = horizontal and 90° = vertical
 2. **Degree of rolling** (how much the leaf is curled—a stress symptom), where 0 = completely flat leaf, 10 = leaf rolled like a cylinder
 
-Examples can be found [here](https://drive.google.com/file/d/1h48JkldCOKC4n7xz1V6fLTOevpplKXqW/view) from slide 4 onward.
 
 ## How to Use
 
@@ -19,7 +18,8 @@ Examples can be found [here](https://drive.google.com/file/d/1h48JkldCOKC4n7xz1V
 
 Run the script:
 ```bash
-python scripts/AngleCam-labeling-tool.py
+conda activate anglecam_v2
+python app.py
 ```
 
 ### Working with Images
@@ -44,7 +44,7 @@ The tool displays 20 red crosses (4x5 grid) on the image as reference points for
 
 Click "Save CSV" to save your work. This creates three files in a "labels" folder:
 
-1. **[name].csv** - Your labeled data (ID, coordinates, angle, rolling)
+1. **[name].csv** - Your labeled data (ID, image coordinates, angle, rolling)
 2. **[name]_sim.csv** - Simulations (reference + 50 variations)
 3. **[name]_simulation_plot.png** - Visualization with distribution curves
 
@@ -84,12 +84,12 @@ your_project/
 ## Workflow Example
 
 1. Create new project in your data folder
-2. Add images to the project
+2. Add plant images to the project
 3. For each image:
-   - Click on leaf points of interest
-   - Edit angle values in the table
+   - Click on at least 20 leaf points (if possible) with regular spacing across the image
+   - Edit angle and rolling values in the table
    - Save when finished
-4. Use the generated simulation files for retraining AngleCam or performance evaluation on own data
+4. Use the generated simulation files for retraining AngleCam or performance evaluation on own data. Move the simulation files (`_sim.csv`; labels) and the corresponding images to this directory: `data/01_Training_Validation_Data/image_data`. Or specify a different location using the command line interface.
 
 ## Output Interpretation
 
