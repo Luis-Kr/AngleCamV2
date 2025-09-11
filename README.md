@@ -56,7 +56,7 @@ mkdir -p data/checkpoint
 
 # Download and place the pre-trained model
 # After downloading from Zenodo, move it to:
-mv AngleCamV2.pth data/checkpoint/
+mv -v AngleCamV2.pth data/checkpoint/
 ```
 
 
