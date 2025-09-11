@@ -6,7 +6,7 @@ defaults:
   - fit_dist: ../utils/fit_beta_distribution.yaml
 
 # Global settings
-device: cuda:0  # auto, cpu, cuda:1, mps
+device: auto  # auto, cpu, cuda:1, mps
 seed: 1234 #42 #1234
 
 # Data paths
