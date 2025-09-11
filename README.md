@@ -91,9 +91,9 @@ python -m anglecam.cli.retrain data.train_csv=path/to/new_training.csv
 ```
 Loads the pre-trained AngleCamV2 model and retrains it on new labeled images. Use this to adapt the model to your specific species or conditions while preserving learned features.
 
-**Make predictions:**
+**Make predictions using the example images:**
 ```bash
-python -m anglecam.cli.predict inference.image_path=path/to/image.jpg
+python -m anglecam.cli.predict
 ```
 
 **Predict on multiple images:**
@@ -144,15 +144,13 @@ Images should be placed in the directory specified by `data.data_dir` in the con
 
 The model uses Hydra for configuration management. Key settings in `anglecam/config/main.yaml`:
 
-- `device`: cuda:0, cpu, or auto
+- `device`: cuda, cpu, mps, or auto
 - `data.train_csv`: Path to training CSV
 - `data.val_csv`: Path to validation CSV  
 - `data.data_dir`: Directory containing images and simulation files (labels)
 
-Override any config parameter from command line:
-```bash
-python -m anglecam.cli.train device=cpu training.epochs=100
-```
+Override any config parameter from command line. 
+
 
 ## Labeling tool
 
