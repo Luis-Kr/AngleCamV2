@@ -37,7 +37,7 @@ class AngleCam:
         self._setup_logging()
         self._setup_reproducibility()
         self._setup_device()
-        self._validate_config()
+        #self._validate_config()
 
     def _setup_logging(self) -> None:
         """Setup logging."""
