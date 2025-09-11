@@ -8,9 +8,9 @@ regular photos. Works with everything from smartphone snapshots to research-grad
 ## Installation
 
 ### Prerequisites
-- <a href="https://docs.conda.io/en/latest/miniconda.html" target="_blank">Conda</a>
+<a href="https://docs.conda.io/en/latest/miniconda.html" target="_blank">Conda</a>
 
-### Quick Setup
+### Quick setup
 
 1. **Clone the repository:**
    ```bash
@@ -34,49 +34,40 @@ regular photos. Works with everything from smartphone snapshots to research-grad
    python -c "import anglecam; print('Installation successful!')"
    ```
 
-## Data Setup
 
-Download the complete dataset and pre-trained models from <a href="https://zenodo.org/records/17086253" target="_blank">Zenodo</a> (44.5 GB):
+## Data and model setup
 
-1. **Download and extract the dataset:**
-   ```bash
-   # Download AngleCamV2_Dataset.zip from Zenodo
-   unzip AngleCamV2_Dataset.zip
-   cp -r AngleCamV2_Dataset/* data/
-   ```
+### For complete new training
+Download the complete dataset including the labels from <a href="https://zenodo.org/records/17086253" target="_blank">Zenodo</a> (45 GB):
 
+```bash
+unzip AngleCamV2_Dataset.zip
 
-## Model Weights Setup
+# After downloading from Zenodo, move it to:
+cp -r AngleCamV2_Dataset/* data/
+```
 
-### Pre-trained Model
-After downloading the dataset from Zenodo, place the pre-trained model weights in the correct location:
+### For prediction and re-training only
+Download only the pre-trained model from <a href="https://doi.org/10.5281/zenodo.17101166" target="_blank">Zenodo</a> (103 MB):
 
 ```bash
 # Create the checkpoint directory if it doesn't exist
 mkdir -p data/checkpoint
 
-# Copy or move the pre-trained model to the expected location
-mv -v path/to/downloaded/AngleCamV2.pth data/checkpoint/
-```
-
-### Custom Model Weights
-If you have your own trained model weights, you can either:
-
-**Option 1: Use the default location**
-```bash
-# Place your model in the default checkpoint directory
-mv -v your_model.pth data/checkpoint/
+# Download and place the pre-trained model
+# After downloading from Zenodo, move it to:
+mv AngleCamV2.pth data/checkpoint/
 ```
 
 
-## Quick Start
+## Quick start
 
 ### Python API
 ```python
 from omegaconf import OmegaConf
 from anglecam.main import AngleCam
 
-# Load config manually
+# Load config (path relative to repository root)
 config = OmegaConf.load("anglecam/config/main.yaml")
 
 # Load model
@@ -86,7 +77,7 @@ model = AngleCam.from_checkpoint("data/checkpoint/AngleCamV2.pth", config)
 results = model.predict("path/to/images/")
 ```
 
-### Command Line Interface
+### Command line interface
 
 **Train a new model from scratch:**
 ```bash
@@ -110,7 +101,7 @@ python -m anglecam.cli.predict inference.image_path=path/to/image.jpg
 python -m anglecam.cli.predict inference.image_path=path/to/images/
 ```
 
-### Essential Configuration Options
+### Essential configuration options
 
 Override any config parameter from command line:
 
@@ -124,19 +115,19 @@ python -m anglecam.cli.train training.epochs=100           # Set number of epoch
 
 **Data paths:**
 ```bash
-python -m anglecam.cli.train data.train_csv=my_data.csv                           # Custom training data
-python -m anglecam.cli.train data.data_dir=path/to/images                        # Custom image directory
-python -m anglecam.cli.retrain data.train_csv=new_species.csv                    # Retrain on new data
+python -m anglecam.cli.train data.train_csv=my_data.csv         # Custom training data
+python -m anglecam.cli.train data.data_dir=path/to/images       # Custom image directory
+python -m anglecam.cli.retrain data.train_csv=new_species.csv   # Retrain on new data
 ```
 
 **Model settings:**
 ```bash
-python -m anglecam.cli.train model.head.dropout=0.3        # Adjust dropout rate
-python -m anglecam.cli.train training.optimizer.lr=1e-5              # Set learning rate
-python -m anglecam.cli.predict inference.pretrained_model_path=my_model.pth            # Use custom model weights
+python -m anglecam.cli.train model.head.dropout=0.3                           # Adjust dropout rate
+python -m anglecam.cli.train training.optimizer.lr=1e-5                       # Set learning rate
+python -m anglecam.cli.predict inference.pretrained_model_path=my_model.pth   # Use custom model weights
 ```
 
-## Training Data Format
+## Training data format
 
 Your training CSV should contain image filenames and species information:
 
@@ -147,7 +138,7 @@ image_002.png,Tilia platyphyllos
 image_003.png,Quercus robur
 ```
 
-Images should be placed in the directory specified by `data.data_dir` in the config (default: `data/01_Training_Validation_Data/image_data`).
+Images should be placed in the directory specified by `data.data_dir` in the config (default: `data/01_Training_Validation_Data/image_data`). 
 
 ## Configuration
 
@@ -156,14 +147,14 @@ The model uses Hydra for configuration management. Key settings in `anglecam/con
 - `device`: cuda:0, cpu, or auto
 - `data.train_csv`: Path to training CSV
 - `data.val_csv`: Path to validation CSV  
-- `data.data_dir`: Directory containing images
+- `data.data_dir`: Directory containing images and simulation files (labels)
 
 Override any config parameter from command line:
 ```bash
 python -m anglecam.cli.train device=cpu training.epochs=100
 ```
 
-## Labeling Tool
+## Labeling tool
 
 Create your own training data using the included labeling tool:
 
@@ -172,15 +163,10 @@ cd scripts/labeling-tool
 python app.py
 ```
 
-The tool provides an interface for manually annotating leaf angles in images.
+The tool provides an interface for manually annotating leaf angles in images. Place the simulation files (`_sim.csv`; labels) and their corresponding images in this folder: `data/01_Training_Validation_Data/image_data`. Or specify a different location using the command line interface.
 
-## Model Architecture
+## Model architecture
 
 - **Backbone**: DINOv2 ViT-S/14 (384-dimensional features)
 - **Head**: Dropout → Linear → Dropout → GELU → Linear → Softmax
 - **Output**: 43-bin probability distribution (0-90° in 2° steps)
-
-## Support
-
-For questions and issues, please:
-- Contact: [luis.kremer@geosense.uni-freiburg.de]
