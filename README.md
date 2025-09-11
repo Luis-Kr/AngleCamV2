@@ -165,6 +165,24 @@ python app.py
 
 The tool provides an interface for manually annotating leaf angles in images. Place the simulation files (`_sim.csv`; labels) and their corresponding images in this folder: `data/01_Training_Validation_Data/image_data`. Or specify a different location using the command line interface.
 
+
+## Troubleshooting
+
+### CUDA error
+If you encounter `AssertionError: Torch not compiled with CUDA enabled`, force CPU usage:
+
+```bash
+python -m anglecam.cli.predict device=cpu
+```
+
+For Apple Silicon Macs, you can also try MPS (Metal Performance Shaders):
+```bash
+python -m anglecam.cli.predict device=mps
+```
+
+This error occurs because the default device is set to `cuda`.
+
+
 ## Model architecture
 
 - **Backbone**: DINOv2 ViT-S/14 (384-dimensional features)
