@@ -89,7 +89,7 @@ your_project/
    - Click on at least 20 leaf points (if possible) with regular spacing across the image
    - Edit angle and rolling values in the table
    - Save when finished
-4. Use the generated simulation files for retraining AngleCam or performance evaluation on own data. Move the simulation files (`_sim.csv`; labels) and the corresponding images to this directory: `data/01_Training_Validation_Data/image_data`. Or specify a different location using the command line interface.
+4. Use the generated simulation files for retraining AngleCam or performance evaluation on own data. For training, move the simulation files (`_sim.csv`; labels) and the corresponding images to this directory: `data/01_Training_Validation_Data/image_data`. Or specify a different location using the command line interface.
 
 ## Output Interpretation
 
