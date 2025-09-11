@@ -163,6 +163,8 @@ python app.py
 
 The tool provides an interface for manually annotating leaf angles in images. Place the simulation files (`_sim.csv`; labels) and their corresponding images in this folder: `data/01_Training_Validation_Data/image_data`. Or specify a different location using the command line interface.
 
+For detailed instructions and documentation, see the [labeling tool directory](scripts/labeling-tool).
+
 
 ## Troubleshooting
 
