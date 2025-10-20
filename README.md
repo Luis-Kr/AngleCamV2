@@ -1,6 +1,6 @@
 # AngleCam V2: Deep learning for leaf angle estimation
 
-AngleCam V2 is a deep learning framework for estimating leaf angle distributions from images. It can track how plants move their leaves throughout the day and night, using nothing more than 
+AngleCam V2 is a deep learning framework for estimating leaf angle distributions from horizontal images. It can track how plants move their leaves throughout the day and night, using nothing more than 
 regular photos. Works with everything from smartphone snapshots to research-grade time-lapse cameras across many plant species.
 
 ![](animation/maranta-leuconeura-timelapse.gif)
