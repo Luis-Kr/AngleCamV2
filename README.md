@@ -64,11 +64,13 @@ mv -v AngleCamV2.pth data/checkpoint/
 
 ### Python API
 ```python
-from omegaconf import OmegaConf
+from hydra import compose, initialize_config_dir
 from anglecam.main import AngleCam
 
 # Load config (path relative to repository root)
-config = OmegaConf.load("anglecam/config/main.yaml")
+config_dir = "anglecam/config/main.yaml"
+with initialize_config_dir(version_base=None, config_dir=config_dir):
+    config = compose(config_name="main")
 
 # Load model
 model = AngleCam.from_checkpoint("data/checkpoint/AngleCamV2.pth", config)
