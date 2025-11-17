@@ -5,7 +5,7 @@ from omegaconf import DictConfig, OmegaConf
 from pathlib import Path
 from typing import Union, List, Optional, Any, Dict
 from datetime import datetime
-import sys
+import sys, os
 
 root_dir = Path(__file__).parent.parent
 sys.path.append(str(root_dir))
@@ -32,6 +32,8 @@ class AngleCam:
         self.predictor = None
         self.logger = None
         self.mode = mode
+        
+        self._setup_project_directories()
 
         # Setup core components
         self._setup_logging()
@@ -58,6 +60,22 @@ class AngleCam:
         seed = self.config.seed
         setup_reproducibility(seed)
         self.logger.info(f"Reproducibility setup with seed: {seed}")
+        
+    def _setup_project_directories(self) -> None:
+        """Create necessary data directories for AngleCam."""
+        self.logger.info("Setting up project directories...")
+        
+        directories = [
+            "data",
+            "data/checkpoint",
+            "data/01_Training_Validation_Data",
+            "data/01_Training_Validation_Data/image_data",
+            "data/01_Training_Validation_Data/splits",
+            "data/outputs",
+        ]
+
+        for directory in directories:
+            Path(directory).mkdir(parents=True, exist_ok=True)
 
     def _setup_device(self) -> None:
         """Setup compute device."""
