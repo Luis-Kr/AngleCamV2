@@ -1,33 +1,29 @@
 from setuptools import setup, find_packages
-import os
 
-
-def create_data_directories():
-    """Create necessary data directories for AngleCam."""
-    directories = [
-        "data",
-        "data/checkpoint",
-        "data/01_Training_Validation_Data",
-        "data/01_Training_Validation_Data/image_data",
-        "data/01_Training_Validation_Data/splits",
-        "data/outputs",
-    ]
-
-    for directory in directories:
-        os.makedirs(directory, exist_ok=True)
-        # Create .gitkeep file to ensure directory is tracked
-        gitkeep_path = os.path.join(directory, ".gitkeep")
-        if not os.path.exists(gitkeep_path):
-            with open(gitkeep_path, "w") as f:
-                f.write("")
-
-
-# Create directories when package is installed
-create_data_directories()
+# Dependencies from environment.yml
+install_deps = [
+    "torch>=2.1.0",
+    "torchvision>=0.16.0",
+    "numpy>=1.24.0,<2.0.0",
+    "pandas>=2.1.0",
+    "scikit-learn>=1.3.0",
+    "scipy>=1.11.0",
+    "pillow>=10.0.0",
+    "matplotlib>=3.7.0",
+    "hydra-core>=1.3.0",
+    "omegaconf>=2.3.0",
+    "albumentations>=1.3.0",
+    "tqdm>=4.65.0",
+    "open3d>=0.18.0",
+    "laspy>=2.5.0",
+    "numba>=0.58.0",
+    "opencv-python>=4.8.0",
+]
 
 setup(
     name="anglecam",
     version="2.0.0",
     packages=find_packages(),
     python_requires=">=3.9",
+    install_requires=install_deps,
 )
