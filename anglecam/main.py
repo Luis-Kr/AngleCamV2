@@ -32,11 +32,10 @@ class AngleCam:
         self.predictor = None
         self.logger = None
         self.mode = mode
-        
-        self._setup_project_directories()
 
         # Setup core components
         self._setup_logging()
+        self._setup_project_directories()
         self._setup_reproducibility()
         self._setup_device()
         #self._validate_config()
