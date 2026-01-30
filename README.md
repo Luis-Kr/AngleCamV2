@@ -60,6 +60,48 @@ mv -v AngleCamV2.pth data/checkpoint/
 ```
 
 
+## Dataset structure
+
+The complete dataset is available on [Zenodo](https://zenodo.org/records/17086253) (45 GB). The repository is organized as follows:
+
+```
+data/
+├── 01_Training_Validation_Data/
+│   ├── image_data/                    
+│   │   ├── [filename].png/.jpg        # RGB images
+│   │   ├── [filename].csv             # Manual leaf angle annotations
+│   │   ├── [filename]_sim.csv         # Simulated distributions (51×43)
+│   │   └── [filename]_dpm.npy         # Depth maps for pseudo-NIR
+│   └── splits/
+│       ├── training.csv               # Training samples
+│       ├── validation.csv             # Validation samples
+│       ├── testing.csv                # Test set samples
+│       └── phylo.csv                  # Phylogenetic analysis samples
+│
+├── 02_Test_Data/
+│   ├── images/                        # Time-series imagery
+│   │   ├── aglaonema_commutatum/      # 14-day water stress experiment
+│   │   ├── calathea_ornata/           # 3-day diurnal monitoring
+│   │   └── maranta_leuconeura/        # 3-day diurnal monitoring
+│   └── TLS/
+│       ├── point_clouds/              # Terrestrial laser scans (.las)
+│       └── analysis/                  # TLS-derived angle distributions
+│
+├── 03_Model_Outputs/
+│   ├── checkpoint/
+│   │   └── AngleCamV2.pth             # Pre-trained model weights
+│   └── predictions/
+│       ├── training_validation/       # Train/val performance metrics
+│       ├── testing/                   # Test predictions per species
+│       └── phylogenetic_error_assessment/  # Phylogenetic analysis results
+│
+└── 04_Supplementary_Material/
+    ├── genus_appendix_table.csv       # Genus-level statistics
+    ├── calathea_timelapse.mp4         # Diurnal movement video
+    └── maranta_timelapse.mp4          # Diurnal movement video
+```
+
+
 ## Quick start
 
 ### Python API
